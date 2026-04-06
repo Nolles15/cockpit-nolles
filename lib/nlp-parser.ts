@@ -17,6 +17,25 @@ export interface ParsedInput {
   type:            ActivityType
 }
 
+// Vertaal NL tijdswoorden zodat chrono-node (EN) ze begrijpt
+function nlToEn(text: string): string {
+  return text
+    .replace(/\bmorgen\b/gi,       'tomorrow')
+    .replace(/\bgisteren\b/gi,     'yesterday')
+    .replace(/\bvandaag\b/gi,      'today')
+    .replace(/\bmaandag\b/gi,      'monday')
+    .replace(/\bdinsdag\b/gi,      'tuesday')
+    .replace(/\bwoensdag\b/gi,     'wednesday')
+    .replace(/\bdonderdag\b/gi,    'thursday')
+    .replace(/\bvrijdag\b/gi,      'friday')
+    .replace(/\bzaterdag\b/gi,     'saturday')
+    .replace(/\bzondag\b/gi,       'sunday')
+    .replace(/\bvolgende week\b/gi,'next week')
+    .replace(/\bdeze week\b/gi,    'this week')
+    .replace(/\bover (\d+) dagen?\b/gi, (_, n) => `in ${n} days`)
+    .replace(/\bover (\d+) weken?\b/gi, (_, n) => `in ${n} weeks`)
+}
+
 export function parseInput(raw: string): ParsedInput {
   let text = raw.trim()
 
@@ -58,12 +77,13 @@ export function parseInput(raw: string): ParsedInput {
     return ''
   }).trim()
 
-  // ── Date: chrono-node NLP ────────────────────────────────
-  const parsed  = chrono.parse(text, new Date(), { forwardDate: true })
+  // ── Date: chrono-node NLP (via NL→EN vertaling) ─────────
+  const textEn   = nlToEn(text)
+  const parsed   = chrono.parse(textEn, new Date(), { forwardDate: true })
   let due_date: Date | null = null
   if (parsed.length > 0) {
     due_date = parsed[0].date()
-    // Strip de datumtekst uit de content
+    // Strip het overeenkomstige stuk uit de originele tekst op basis van positie
     text = text.slice(0, parsed[0].index) + text.slice(parsed[0].index + parsed[0].text.length)
     text = text.trim()
   }
