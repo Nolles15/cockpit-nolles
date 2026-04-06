@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ultra-Flow</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    :root {
+      --bg:       #f5f6fb;
+      --surface:  #ffffff;
+      --border:   #e8e9f2;
+      --border2:  #f0f1f8;
+      --indigo:   #4f46e5;
+      --indigo-s: #eeeeff;
+      --indigo-m: #a5b4fc;
+      --text:     #0f1117;
+      --text2:    #6b7080;
+      --text3:    #b0b5c8;
+      --urgent:   #e53e3e;
+      --amber:    #d97706;
+      --green:    #16a34a;
+      --red-bg:   #fff5f5;
+    }
+
+    body {
+      font-family:'Inter',-apple-system,sans-serif;
+      background:var(--bg); color:var(--text);
+      height:100vh; overflow:hidden;
+      display:flex; flex-direction:column;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* ── TOPBAR ─────────────────────────────── */
+    .topbar {
+      height:52px; background:var(--surface);
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center;
+      padding:0 22px; gap:18px; flex-shrink:0; z-index:50;
+    }
+    .logo { font-size:15px; font-weight:800; color:var(--indigo); letter-spacing:-.3px; }
+    .logo-sub { font-size:9px; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:var(--text3); display:block; margin-top:-1px; }
+    .search {
+      flex:1; max-width:360px; margin:0 auto;
+      display:flex; align-items:center; gap:7px;
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:9px; padding:7px 13px;
+      font-size:13px; color:var(--text3); font-family:inherit;
+    }
+    .topbar-r { margin-left:auto; display:flex; align-items:center; gap:8px; }
+    .sync-pill {
+      display:flex; align-items:center; gap:5px;
+      font-size:11.5px; color:var(--text3); font-weight:500;
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:20px; padding:4px 10px; cursor:pointer;
+    }
+    .sync-dot { width:6px; height:6px; border-radius:50%; background:var(--green); flex-shrink:0; }
+    .av { width:32px; height:32px; border-radius:8px; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; cursor:pointer; }
+
+    /* ── SHELL ──────────────────────────────── */
+    .shell { display:flex; flex:1; overflow:hidden; }
+
+    /* ── SIDEBAR ────────────────────────────── */
+    .sidebar {
+      width:208px; flex-shrink:0;
+      background:var(--surface);
+      border-right:1px solid var(--border);
+      display:flex; flex-direction:column;
+      z-index:20; padding:18px 0 0;
+      overflow-y:auto;
+    }
+    .sidebar::-webkit-scrollbar { display:none; }
+
+    .sb-grp { margin-bottom:24px; }
+    .sb-grp-lbl {
+      font-size:9.5px; font-weight:700; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--text3);
+      padding:0 16px 5px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .sb-grp-add { font-size:15px; cursor:pointer; opacity:.45; line-height:1; transition:opacity .1s; }
+    .sb-grp-add:hover { opacity:1; color:var(--indigo); }
+
+    .sb-item {
+      display:flex; align-items:center; gap:9px;
+      padding:7px 16px;
+      font-size:13.5px; font-weight:500;
+      color:var(--text2); cursor:pointer;
+      transition:background .1s, color .1s;
+      position:relative; white-space:nowrap;
+    }
+    .sb-item:hover { background:var(--indigo-s); color:var(--indigo); }
+    .sb-item.active { color:var(--indigo); background:var(--indigo-s); font-weight:600; }
+    .sb-item.active::before {
+      content:''; position:absolute; left:0; top:4px; bottom:4px;
+      width:2.5px; background:var(--indigo); border-radius:0 2px 2px 0;
+    }
+    .sb-icon { font-size:14px; width:16px; text-align:center; flex-shrink:0; }
+    .sb-dot  { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .sb-n    { margin-left:auto; font-size:11px; font-weight:700; color:var(--text3); }
+    .sb-n.red { color:var(--urgent); }
+
+    .sb-person {
+      display:flex; align-items:center; gap:9px;
+      padding:5px 16px; font-size:13px; font-weight:500;
+      color:var(--text2); cursor:pointer;
+    }
+    .sb-person:hover { color:var(--text); }
+    .sb-ava { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex-shrink:0; }
+
+    .sb-cta {
+      margin:auto 13px 16px;
+      padding:10px; background:var(--indigo); color:#fff;
+      border-radius:10px; font-size:13px; font-weight:600;
+      cursor:pointer; text-align:center;
+      box-shadow:0 2px 12px rgba(79,70,229,.22);
+      transition:filter .1s;
+    }
+    .sb-cta:hover { filter:brightness(1.08); }
+
+    /* ── MAIN ───────────────────────────────── */
+    .main { flex:1; overflow-y:auto; min-width:0; background:var(--bg); }
+    .main::-webkit-scrollbar { width:4px; }
+    .main::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+    /* capture bar */
+    .cap-wrap {
+      position:sticky; top:0; z-index:5;
+      background:var(--bg); padding:18px 30px 0;
+    }
+    .cap-inner {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:13px; padding:13px 18px;
+      display:flex; align-items:center; gap:11px;
+      box-shadow:0 1px 4px rgba(0,0,0,.04);
+      transition:box-shadow .2s, border-color .2s;
+    }
+    .cap-inner:focus-within {
+      border-color:var(--indigo-m);
+      box-shadow:0 0 0 3px rgba(79,70,229,.08), 0 2px 8px rgba(0,0,0,.06);
+    }
+    .cap-plus {
+      width:26px; height:26px; border-radius:7px;
+      background:var(--indigo-s); color:var(--indigo);
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px; font-weight:300; flex-shrink:0; line-height:1;
+    }
+    .cap-input {
+      flex:1; background:none; border:none; outline:none;
+      font-size:14px; font-family:inherit; color:var(--text);
+      caret-color:var(--indigo);
+    }
+    .cap-input::placeholder { color:var(--text3); }
+    .cap-chips { display:flex; gap:5px; flex-wrap:wrap; }
+    .chip {
+      font-size:11px; font-weight:600; padding:2px 8px;
+      border-radius:20px; border:1px solid; white-space:nowrap;
+    }
+
+    /* section */
+    .section { padding:26px 30px 0; }
+
+    .sec-hdr {
+      display:flex; align-items:baseline; gap:9px;
+      padding-bottom:12px; border-bottom:1px solid var(--border);
+      margin-bottom:0;
+    }
+    .sec-title { font-size:16px; font-weight:700; letter-spacing:-.2px; }
+    .sec-sub   { font-size:12.5px; color:var(--text3); font-weight:400; }
+    .sec-ct    { margin-left:auto; font-size:12px; color:var(--text3); }
+
+    /* ── TASK ROW ────────────────────────────── */
+    .task {
+      display:flex; align-items:center; gap:12px;
+      padding:14px 8px 14px 0;
+      border-bottom:1px solid var(--border2);
+      cursor:default;
+      position:relative;
+      user-select:none;
+      transition:background .1s;
+    }
+    .task:last-of-type { border-bottom:none; }
+    .task.dragging { opacity:.35; }
+    .task.drag-over-top::before {
+      content:''; position:absolute; top:-1px; left:0; right:0;
+      height:2px; background:var(--indigo); border-radius:2px; z-index:10;
+    }
+    .task.drag-over-bot::after {
+      content:''; position:absolute; bottom:-1px; left:0; right:0;
+      height:2px; background:var(--indigo); border-radius:2px; z-index:10;
+    }
+
+    .drag-handle {
+      color:var(--text3); font-size:14px; cursor:grab;
+      opacity:0; flex-shrink:0;
+      transition:opacity .1s;
+      padding:2px 0;
+    }
+    .task:hover .drag-handle { opacity:1; }
+
+    .cb {
+      width:18px; height:18px; border-radius:50%;
+      border:1.5px solid var(--border); flex-shrink:0;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:border-color .15s, background .15s; position:relative;
+    }
+    .cb:hover { border-color:var(--indigo); }
+    .cb.done  { background:var(--indigo); border-color:var(--indigo); }
+    .cb.done::after { content:'✓'; font-size:10px; color:#fff; font-weight:600; }
+    .cb.ov    { border-color:#fca5a5; }
+
+    .pbar { width:3px; border-radius:3px; flex-shrink:0; align-self:stretch; min-height:16px; }
+    .pu { background:var(--urgent); }
+    .ph { background:var(--amber); }
+    .pn { background:transparent; }
+
+    .task-body { flex:1; min-width:0; }
+    .task-txt  { font-size:14px; font-weight:500; color:var(--text); line-height:1.4; letter-spacing:-.05px; }
+    .task-txt.done { text-decoration:line-through; color:var(--text3); font-weight:400; }
+    .task-txt.ov   { color:var(--urgent); }
+
+    .task-sub { display:flex; align-items:center; gap:7px; margin-top:3px; flex-wrap:wrap; }
+    .tp { font-size:11.5px; font-weight:500; color:var(--indigo); display:flex; align-items:center; gap:3px; }
+    .tp-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+    .tper { font-size:11.5px; font-weight:500; color:var(--text2); }
+    .tnote { font-size:11px; font-weight:500; color:var(--amber); }
+
+    .task-r { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .t-time { font-size:12.5px; font-weight:500; color:var(--text3); white-space:nowrap; }
+    .t-time.ov { color:var(--urgent); font-weight:600; }
+    .pl { font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+    .plu { color:var(--urgent); }
+    .plh { color:var(--amber); }
+
+    .task-acts { display:none; align-items:center; gap:2px; }
+    .task:hover .task-acts { display:flex; }
+    .ta-btn {
+      width:26px; height:26px; border-radius:7px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px; color:var(--text3); cursor:pointer;
+      transition:background .1s, color .1s;
+    }
+    .ta-btn:hover { background:var(--indigo-s); color:var(--indigo); }
+
+    /* overdue card */
+    .task.ov-row {
+      background:var(--red-bg); border-radius:10px;
+      padding:13px 10px; margin-bottom:2px; border:none;
+    }
+
+    /* add-task row */
+    .add-task-row {
+      display:flex; align-items:center; gap:10px;
+      padding:11px 8px 11px 0;
+      color:var(--text3); font-size:13px;
+      cursor:pointer; border-top:1px solid var(--border2);
+      transition:color .12s;
+    }
+    .add-task-row:hover { color:var(--indigo); }
+    .add-task-input {
+      flex:1; background:none; border:none; outline:none;
+      font-size:13.5px; font-family:inherit; color:var(--text);
+      caret-color:var(--indigo); display:none;
+      padding:0;
+    }
+    .add-task-input::placeholder { color:var(--text3); }
+    .add-task-row.open .add-label { display:none; }
+    .add-task-row.open .add-task-input { display:block; }
+    .add-task-row.open { color:var(--text3); border-top-color:var(--indigo-m); }
+
+    /* ── FILTER VIEW ────────────────────────── */
+    .filter-view { display:none; flex:1; overflow-y:auto; padding:26px 30px; background:var(--bg); }
+    .filter-view.on { display:block; }
+
+    /* ── PROJECT PAGE ───────────────────────── */
+    .proj-page { display:none; flex:1; flex-direction:column; overflow:hidden; background:var(--bg); }
+    .proj-page.on { display:flex; }
+
+    .proj-top { background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+    .proj-top-inner { padding:20px 30px 0; }
+    .proj-back { font-size:12px; color:var(--text3); cursor:pointer; margin-bottom:10px; display:inline-flex; align-items:center; gap:4px; }
+    .proj-back:hover { color:var(--indigo); }
+    .proj-name-row { display:flex; align-items:center; gap:11px; margin-bottom:14px; }
+    .proj-col { width:11px; height:11px; border-radius:50%; background:var(--indigo); flex-shrink:0; }
+    .proj-name { font-size:21px; font-weight:800; letter-spacing:-.4px; }
+    .proj-status { font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; text-transform:uppercase; letter-spacing:.05em; background:#f0fdf4; color:var(--green); }
+    .proj-dl { font-size:12px; color:var(--text2); margin-left:auto; }
+
+    .proj-tabs { display:flex; }
+    .proj-tab { padding:8px 18px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer; border-bottom:2px solid transparent; transition:all .12s; }
+    .proj-tab:hover { color:var(--text); }
+    .proj-tab.on { color:var(--indigo); border-bottom-color:var(--indigo); font-weight:600; }
+
+    .proj-body { flex:1; overflow-y:auto; padding:24px 30px; }
+    .proj-body::-webkit-scrollbar { width:4px; }
+    .proj-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+    .proj-tab-content { display:none; }
+    .proj-tab-content.on { display:block; }
+
+    .proj-card { background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:20px 22px; margin-bottom:14px; }
+    .proj-card-lbl { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text3); margin-bottom:14px; }
+
+    /* milestones */
+    .ms {
+      display:flex; align-items:flex-start; gap:12px;
+      padding:14px 0; border-bottom:1px solid var(--border2);
+    }
+    .ms:last-child { border-bottom:none; }
+    .ms-ic { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; margin-top:1px; }
+    .ms-done { background:#f0fdf4; color:var(--green); }
+    .ms-now  { background:var(--indigo-s); color:var(--indigo); }
+    .ms-todo { border:1.5px solid var(--border); color:var(--text3); }
+    .ms-body { flex:1; }
+    .ms-name { font-size:14px; font-weight:600; }
+    .ms-name.done { text-decoration:line-through; color:var(--text3); font-weight:400; }
+    .ms-date { font-size:12px; color:var(--text2); margin-top:2px; }
+    .ms-date.now { color:var(--indigo); font-weight:600; }
+    .ms-prog { font-size:11px; color:var(--text3); margin-top:6px; }
+    .ms-subtasks { margin-top:10px; padding-left:4px; }
+    .ms-sub {
+      display:flex; align-items:center; gap:9px;
+      padding:8px 0; border-bottom:1px solid var(--border2);
+      font-size:13px;
+    }
+    .ms-sub:last-child { border-bottom:none; }
+    .ms-sub .cb { width:15px; height:15px; }
+    .ms-sub-txt { color:var(--text); font-weight:400; }
+    .ms-sub-txt.done { text-decoration:line-through; color:var(--text3); }
+    .ms-add-sub {
+      display:flex; align-items:center; gap:9px;
+      padding:7px 0; color:var(--text3); font-size:12.5px; cursor:pointer;
+      border-top:1px dashed var(--border);
+      margin-top:4px;
+    }
+    .ms-add-sub:hover { color:var(--indigo); }
+
+    /* notities */
+    .notes-area {
+      width:100%; min-height:200px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:13px; padding:18px 20px;
+      font-size:13.5px; font-family:inherit; color:var(--text);
+      resize:vertical; outline:none; line-height:1.7;
+    }
+    .notes-area:focus { border-color:var(--indigo-m); box-shadow:0 0 0 3px rgba(79,70,229,.07); }
+
+    /* ── PULSE ──────────────────────────────── */
+    .pulse {
+      width:264px; flex-shrink:0;
+      background:var(--surface); border-left:1px solid var(--border);
+      display:flex; flex-direction:column; overflow:hidden;
+      position:relative; z-index:10;
+    }
+    .pulse-hdr { padding:18px 18px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; flex-shrink:0; }
+    .pulse-title { font-size:14px; font-weight:700; }
+    .live-pill { margin-left:auto; display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700; color:var(--indigo); text-transform:uppercase; letter-spacing:.07em; }
+    .live-dot { width:6px; height:6px; border-radius:50%; background:var(--indigo); animation:lp 2s ease-in-out infinite; }
+    @keyframes lp { 0%,100%{box-shadow:0 0 0 2px rgba(79,70,229,.15)} 50%{box-shadow:0 0 0 5px rgba(79,70,229,.05)} }
+
+    .tl-scroll { flex:1; overflow-y:auto; padding:6px 16px 18px; }
+    .tl-scroll::-webkit-scrollbar { width:0; }
+
+    .tl-row { display:grid; grid-template-columns:40px 1fr; min-height:50px; position:relative; }
+    .tl-row::after { content:''; position:absolute; left:40px; right:0; top:0; height:1px; background:var(--border2); }
+    .tl-t { font-size:10.5px; font-weight:500; color:var(--text3); padding-top:4px; font-variant-numeric:tabular-nums; }
+    .tl-s { position:relative; padding:3px 0; }
+
+    .ev { border-radius:8px; padding:6px 9px; position:absolute; left:0; right:5px; overflow:hidden; cursor:pointer; }
+    .ev-out { background:var(--indigo-s); border-left:3px solid var(--indigo); }
+    .ev-blk { background:#f0fdf4; border-left:3px solid var(--green); }
+    .ev-t { font-size:12px; font-weight:600; color:var(--text); }
+    .ev-s { font-size:10px; color:var(--text2); margin-top:1px; }
+
+    .now-bar { position:absolute; left:40px; right:0; height:1.5px; background:var(--indigo); z-index:2; }
+    .now-bar::before { content:''; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:var(--indigo); }
+
+    .drop-tl {
+      height:33px; border:1.5px dashed #dde0f2; border-radius:8px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:10px; color:#c8cbdf; cursor:pointer; margin:2px 5px 2px 0;
+      transition:all .15s;
+    }
+    .drop-tl:hover { border-color:var(--indigo); color:var(--indigo); background:var(--indigo-s); }
+
+    /* ── SLIDE-OVER ─────────────────────────── */
+    .so-wrap { display:none; position:absolute; inset:0; z-index:40; }
+    .so-wrap.on { display:block; }
+    .so-back { position:absolute; inset:0; background:rgba(15,17,23,.1); backdrop-filter:blur(1px); }
+    .so-panel { position:absolute; top:0; right:0; bottom:0; width:310px; background:var(--surface); border-left:1px solid var(--border); box-shadow:-4px 0 24px rgba(0,0,0,.07); display:flex; flex-direction:column; }
+    .so-hdr { padding:18px 18px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .so-top { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+    .so-name { font-size:15px; font-weight:800; color:var(--indigo); }
+    .so-x { margin-left:auto; width:26px; height:26px; border-radius:7px; background:var(--bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text3); cursor:pointer; }
+    .so-x:hover { color:var(--text); }
+    .so-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-bottom:10px; }
+    .so-stat { background:var(--bg); border-radius:9px; padding:9px 10px; text-align:center; }
+    .so-sv { font-size:19px; font-weight:800; }
+    .so-sl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); margin-top:2px; }
+    .so-opn { width:100%; padding:8px; background:var(--indigo-s); border:1.5px dashed var(--indigo-m); border-radius:9px; color:var(--indigo); font-size:12.5px; font-weight:600; cursor:pointer; text-align:center; }
+    .so-opn:hover { background:var(--indigo); color:#fff; border-style:solid; }
+    .so-feed { flex:1; overflow-y:auto; padding:13px 18px; }
+    .so-lbl { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--text3); margin-bottom:11px; }
+    .frow { display:flex; gap:9px; padding:10px 0; border-bottom:1px solid var(--border2); }
+    .fi { width:25px; height:25px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+    .fi-o { background:var(--indigo-s); }
+    .fi-d { background:#f0fdf4; }
+    .fi-n { background:#fffbeb; }
+    .ftxt { font-size:12.5px; font-weight:500; color:var(--text); line-height:1.4; }
+    .fmeta { font-size:11px; color:var(--text3); margin-top:2px; }
+    .frow.fdone .ftxt { text-decoration:line-through; opacity:.4; font-weight:400; }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <div class="logo">Ultra-Flow</div>
+    <span class="logo-sub">Atmospheric Productivity</span>
+  </div>
+  <div class="search">⌕&nbsp; Zoek taken, projecten, mensen…</div>
+  <div class="topbar-r">
+    <div class="sync-pill"><div class="sync-dot"></div>Synced 2 min ago</div>
+    <div class="sync-pill" title="Synchroniseer nu">↻</div>
+    <div class="av">J</div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-grp">
+      <div class="sb-item active" id="sb-main" onclick="showMain()">
+        <span class="sb-icon">○</span> Overzicht
+      </div>
+      <div class="sb-item">
+        <span class="sb-icon">⊞</span> Chronos
+      </div>
+    </div>
+
+    <div class="sb-grp">
+      <div class="sb-grp-lbl">Projecten <span class="sb-grp-add" title="Nieuw project">+</span></div>
+      <div class="sb-item" id="sb-bi" onclick="showProject()">
+        <div class="sb-dot" style="background:#4f46e5"></div>
+        Brand Identity
+        <span class="sb-n red">3</span>
+      </div>
+      <div class="sb-item" onclick="showFilter('Aero v2.0','#f59e0b')">
+        <div class="sb-dot" style="background:#f59e0b"></div>
+        Aero v2.0
+        <span class="sb-n">2</span>
+      </div>
+      <div class="sb-item" onclick="showFilter('Research','#22c55e')">
+        <div class="sb-dot" style="background:#22c55e"></div>
+        Research
+        <span class="sb-n">1</span>
+      </div>
+      <div class="sb-item" onclick="showFilter('Infrastructure','#3b82f6')">
+        <div class="sb-dot" style="background:#3b82f6"></div>
+        Infrastructure
+        <span class="sb-n">4</span>
+      </div>
+    </div>
+
+    <div class="sb-grp">
+      <div class="sb-grp-lbl">Mensen <span class="sb-grp-add">+</span></div>
+      <div class="sb-person"><div class="sb-ava" style="background:#eeeeff;color:#4f46e5">EV</div>Elena Vance</div>
+      <div class="sb-person"><div class="sb-ava" style="background:#fef3c7;color:#d97706">TK</div>Thomas Kim</div>
+      <div class="sb-person"><div class="sb-ava" style="background:#f0fdf4;color:#16a34a">LS</div>Lena Schmidt</div>
+    </div>
+
+    <div style="flex:1"></div>
+    <div class="sb-cta" onclick="focusCap()">+ Nieuwe taak</div>
+  </div>
+
+  <!-- MAIN (takenlijst) -->
+  <div class="main" id="viewMain">
+
+    <!-- Capture bar -->
+    <div class="cap-wrap">
+      <div class="cap-inner">
+        <div class="cap-plus">+</div>
+        <input id="capInput" class="cap-input"
+          placeholder="Nieuwe taak… bijv. 'Proposal afmaken morgen 10u #brand-identity @sophie !!'"
+          onkeyup="parseChips(this.value)"
+          onkeydown="if(event.key==='Escape')this.blur()"
+        />
+        <div class="cap-chips" id="capChips"></div>
+      </div>
+    </div>
+
+    <!-- OVERDUE -->
+    <div class="section">
+      <div class="sec-hdr">
+        <span class="sec-title" style="color:var(--urgent)">Overdue</span>
+        <span class="sec-sub" style="color:#fca5a5">gisteren</span>
+      </div>
+      <div id="list-ov">
+        <div class="task ov-row" draggable="true" ondragstart="dragStart(event,'ov',0)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pu"></div>
+          <div class="cb ov"></div>
+          <div class="task-body">
+            <div class="task-txt ov">Research samenvatting doorsturen</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#22c55e"></span>#research</span>
+              <span class="tper">@thomas</span>
+            </div>
+          </div>
+          <div class="task-r">
+            <span class="t-time ov">Gisteren 17:00</span>
+            <div class="task-acts">
+              <div class="ta-btn" title="Verplaats naar vandaag" onclick="alert('Verplaatst naar vandaag')">→</div>
+              <div class="ta-btn" title="Bewerk">✏</div>
+              <div class="ta-btn" title="Verwijder">×</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VANDAAG -->
+    <div class="section">
+      <div class="sec-hdr">
+        <span class="sec-title">Vandaag</span>
+        <span class="sec-sub">zondag 5 april</span>
+        <span class="sec-ct">3 open</span>
+      </div>
+      <div id="list-today" ondragover="dragOver(event,'today')" ondrop="drop(event,'today')" ondragleave="dragLeave(event)">
+        <div class="task" draggable="true" ondragstart="dragStart(event,'today',0)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pu"></div>
+          <div class="cb"></div>
+          <div class="task-body">
+            <div class="task-txt">Proposal afmaken voor handover</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#4f46e5"></span>#brand-identity</span>
+              <span class="tper">@sophie</span>
+            </div>
+          </div>
+          <div class="task-r">
+            <span class="t-time">16:00</span>
+            <span class="pl plu">Urgent</span>
+            <div class="task-acts">
+              <div class="ta-btn" title="Plan in agenda">⊞</div>
+              <div class="ta-btn" title="Bewerk">✏</div>
+              <div class="ta-btn" title="Verwijder">×</div>
+            </div>
+          </div>
+        </div>
+        <div class="task" draggable="true" ondragstart="dragStart(event,'today',1)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pn"></div>
+          <div class="cb"></div>
+          <div class="task-body">
+            <div class="task-txt">Server migratie checklist doornemen</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#3b82f6"></span>#infrastructure</span>
+            </div>
+          </div>
+          <div class="task-r">
+            <span class="t-time">14:00</span>
+            <div class="task-acts">
+              <div class="ta-btn">⊞</div><div class="ta-btn">✏</div><div class="ta-btn">×</div>
+            </div>
+          </div>
+        </div>
+        <div class="task" draggable="true" ondragstart="dragStart(event,'today',2)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar ph"></div>
+          <div class="cb"></div>
+          <div class="task-body">
+            <div class="task-txt">Call re curriculum module 3</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#a78bfa"></span>#curriculum</span>
+              <span class="tper">@lena</span>
+            </div>
+          </div>
+          <div class="task-r">
+            <span class="t-time">15:00</span>
+            <span class="pl plh">High</span>
+            <div class="task-acts">
+              <div class="ta-btn">⊞</div><div class="ta-btn">✏</div><div class="ta-btn">×</div>
+            </div>
+          </div>
+        </div>
+        <div class="task" style="opacity:.4" draggable="true" ondragstart="dragStart(event,'today',3)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pn"></div>
+          <div class="cb done"></div>
+          <div class="task-body">
+            <div class="task-txt done">Analytics dashboard setup @thomas</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#f59e0b"></span>#aero-v2</span>
+              <span class="t-time" style="font-size:11px">Gedaan 09:14</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Inline add -->
+      <div class="add-task-row" id="add-today" onclick="openAdd('today')">
+        <div class="cap-plus" style="width:20px;height:20px;font-size:14px;border-radius:5px;opacity:.5">+</div>
+        <span class="add-label" style="font-size:13px">Taak toevoegen aan Vandaag</span>
+        <input class="add-task-input" placeholder="Taaknaam… druk Enter om op te slaan" onkeydown="if(event.key==='Enter'||event.key==='Escape')closeAdd('today')" />
+      </div>
+    </div>
+
+    <!-- MORGEN -->
+    <div class="section">
+      <div class="sec-hdr">
+        <span class="sec-title">Morgen</span>
+        <span class="sec-sub">maandag 6 april</span>
+        <span class="sec-ct">2 open</span>
+      </div>
+      <div id="list-tomorrow" ondragover="dragOver(event,'tomorrow')" ondrop="drop(event,'tomorrow')" ondragleave="dragLeave(event)">
+        <div class="task" draggable="true" ondragstart="dragStart(event,'tomorrow',0)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pn"></div>
+          <div class="cb"></div>
+          <div class="task-body">
+            <div class="task-txt">Investor Deck slides reviewen</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#4f46e5"></span>#brand-identity</span>
+            </div>
+          </div>
+          <div class="task-r">
+            <span class="t-time">10:00</span>
+            <div class="task-acts">
+              <div class="ta-btn">⊞</div><div class="ta-btn">✏</div>
+            </div>
+          </div>
+        </div>
+        <div class="task" draggable="true" ondragstart="dragStart(event,'tomorrow',1)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pn"></div>
+          <div class="cb"></div>
+          <div class="task-body">
+            <div class="task-txt">Note: Hybride onderwijs findings — follow-up studie verkennen</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#22c55e"></span>#research</span>
+              <span class="tnote">📝 Notitie</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="add-task-row" id="add-tomorrow" onclick="openAdd('tomorrow')">
+        <div class="cap-plus" style="width:20px;height:20px;font-size:14px;border-radius:5px;opacity:.5">+</div>
+        <span class="add-label" style="font-size:13px">Taak toevoegen aan Morgen</span>
+        <input class="add-task-input" placeholder="Taaknaam… druk Enter om op te slaan" onkeydown="if(event.key==='Enter'||event.key==='Escape')closeAdd('tomorrow')" />
+      </div>
+    </div>
+
+    <!-- DEZE WEEK -->
+    <div class="section" style="padding-bottom:40px">
+      <div class="sec-hdr">
+        <span class="sec-title">Deze week</span>
+        <span class="sec-sub">di – zo</span>
+        <span class="sec-ct">3 open</span>
+      </div>
+      <div id="list-week" ondragover="dragOver(event,'week')" ondrop="drop(event,'week')" ondragleave="dragLeave(event)">
+        <div class="task" draggable="true" ondragstart="dragStart(event,'week',0)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pn"></div>
+          <div class="cb"></div>
+          <div class="task-body">
+            <div class="task-txt">Sprint Grooming bijwonen</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#f59e0b"></span>#aero-v2</span>
+            </div>
+          </div>
+          <div class="task-r"><span class="t-time">Wo 14:00</span><div class="task-acts"><div class="ta-btn">⊞</div><div class="ta-btn">✏</div></div></div>
+        </div>
+        <div class="task" draggable="true" ondragstart="dragStart(event,'week',1)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pn"></div>
+          <div class="cb"></div>
+          <div class="task-body">
+            <div class="task-txt">Documentation architecture tokens</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#3b82f6"></span>#infrastructure</span>
+            </div>
+          </div>
+          <div class="task-r"><span class="t-time">Do</span><div class="task-acts"><div class="ta-btn">✏</div></div></div>
+        </div>
+        <div class="task" draggable="true" ondragstart="dragStart(event,'week',2)">
+          <div class="drag-handle">⠿</div>
+          <div class="pbar pn"></div>
+          <div class="cb"></div>
+          <div class="task-body">
+            <div class="task-txt">Infrastructuur docs updaten na migratie</div>
+            <div class="task-sub">
+              <span class="tp"><span class="tp-dot" style="background:#3b82f6"></span>#infrastructure</span>
+            </div>
+          </div>
+          <div class="task-r"><span class="t-time">Vr</span><div class="task-acts"><div class="ta-btn">✏</div></div></div>
+        </div>
+      </div>
+      <div class="add-task-row" id="add-week" onclick="openAdd('week')">
+        <div class="cap-plus" style="width:20px;height:20px;font-size:14px;border-radius:5px;opacity:.5">+</div>
+        <span class="add-label" style="font-size:13px">Taak toevoegen aan Deze week</span>
+        <input class="add-task-input" placeholder="Taaknaam… druk Enter om op te slaan" onkeydown="if(event.key==='Enter'||event.key==='Escape')closeAdd('week')" />
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTER VIEW -->
+  <div class="filter-view" id="viewFilter">
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:5px">
+      <div id="fDot" class="sb-dot" style="width:10px;height:10px"></div>
+      <div style="font-size:21px;font-weight:800;letter-spacing:-.4px" id="fName">Aero v2.0</div>
+    </div>
+    <div style="font-size:12.5px;color:var(--text3);margin-bottom:18px">Gefilterd op project · taken staan ook in de globale lijst</div>
+    <button onclick="showProject()" style="margin-bottom:22px;padding:8px 16px;background:var(--indigo);color:#fff;border:none;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">↗ Open volledige projectpagina</button>
+
+    <div class="sec-hdr" style="margin-bottom:6px"><span class="sec-title" style="font-size:14px">Open</span><span class="sec-ct">2</span></div>
+    <div class="task">
+      <div class="drag-handle">⠿</div>
+      <div class="pbar pu"></div>
+      <div class="cb"></div>
+      <div class="task-body"><div class="task-txt">Interface Refinement v2</div><div class="task-sub"><span class="tper">@elena</span></div></div>
+      <div class="task-r"><span class="t-time">Vandaag</span><span class="pl plu">Urgent</span></div>
+    </div>
+    <div class="task">
+      <div class="drag-handle">⠿</div>
+      <div class="pbar pn"></div>
+      <div class="cb"></div>
+      <div class="task-body"><div class="task-txt">Sprint Grooming bijwonen</div></div>
+      <div class="task-r"><span class="t-time">Wo 14:00</span></div>
+    </div>
+    <div class="add-task-row" onclick="this.querySelector('input').style.display='block';this.querySelector('input').focus();this.querySelector('.add-label').style.display='none'">
+      <div class="cap-plus" style="width:20px;height:20px;font-size:14px;border-radius:5px;opacity:.5">+</div>
+      <span class="add-label" style="font-size:13px">Taak toevoegen aan dit project</span>
+      <input class="add-task-input" style="display:none" placeholder="Taaknaam… #aero-v2 wordt automatisch toegevoegd" onkeydown="if(event.key==='Escape')this.blur()" />
+    </div>
+
+    <div class="sec-hdr" style="margin-top:22px;margin-bottom:6px;opacity:.6"><span class="sec-title" style="font-size:14px;color:var(--text2)">Afgerond</span><span class="sec-ct">3</span></div>
+    <div class="task" style="opacity:.35">
+      <div class="pbar pn"></div>
+      <div class="cb done"></div>
+      <div class="task-body"><div class="task-txt done">Analytics dashboard setup</div><div class="task-sub"><span class="tper">@thomas</span><span class="t-time" style="font-size:11px">Vandaag 09:14</span></div></div>
+    </div>
+  </div>
+
+  <!-- PROJECT PAGE -->
+  <div class="proj-page" id="viewProject">
+    <div class="proj-top">
+      <div class="proj-top-inner">
+        <div class="proj-back" onclick="showMain()">← Terug naar overzicht</div>
+        <div class="proj-name-row">
+          <div class="proj-col"></div>
+          <div class="proj-name">Brand Identity Campaign</div>
+          <div class="proj-status">Actief</div>
+          <div class="proj-dl">Deadline: 1 mei 2026</div>
+        </div>
+        <div class="proj-tabs">
+          <div class="proj-tab on" onclick="switchTab('taken')">Taken (5)</div>
+          <div class="proj-tab" onclick="switchTab('milestones')">Milestones</div>
+          <div class="proj-tab" onclick="switchTab('notities')">Notities</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="proj-body">
+
+      <!-- TAB: TAKEN -->
+      <div class="proj-tab-content on" id="tab-taken">
+        <div class="proj-card">
+          <div class="proj-card-lbl">Open taken</div>
+
+          <div class="task" style="padding:12px 0">
+            <div class="drag-handle">⠿</div>
+            <div class="pbar pu"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Proposal afmaken voor handover</div>
+              <div class="task-sub"><span class="tper">@sophie</span></div>
+            </div>
+            <div class="task-r"><span class="t-time">Vandaag 16:00</span><span class="pl plu">Urgent</span><div class="task-acts"><div class="ta-btn">✏</div><div class="ta-btn">×</div></div></div>
+          </div>
+          <div class="task" style="padding:12px 0">
+            <div class="drag-handle">⠿</div>
+            <div class="pbar pn"></div>
+            <div class="cb"></div>
+            <div class="task-body"><div class="task-txt">Investor Deck slides reviewen</div></div>
+            <div class="task-r"><span class="t-time">Vr 10:00</span><div class="task-acts"><div class="ta-btn">✏</div><div class="ta-btn">×</div></div></div>
+          </div>
+          <div class="task" style="padding:12px 0; border-bottom:none">
+            <div class="drag-handle">⠿</div>
+            <div class="pbar pn"></div>
+            <div class="cb"></div>
+            <div class="task-body"><div class="task-txt">Logo systeem export voor print</div><div class="task-sub"><span class="tper">@elena</span></div></div>
+            <div class="task-r"><span class="t-time">9 apr</span><div class="task-acts"><div class="ta-btn">✏</div><div class="ta-btn">×</div></div></div>
+          </div>
+
+          <!-- Inline add in project -->
+          <div class="add-task-row" id="add-proj" style="border-top:1px dashed var(--border)" onclick="openAdd('proj')">
+            <div class="cap-plus" style="width:20px;height:20px;font-size:14px;border-radius:5px;opacity:.5">+</div>
+            <span class="add-label" style="font-size:13px">Taak toevoegen aan dit project</span>
+            <input class="add-task-input" placeholder="#brand-identity wordt automatisch toegevoegd — typ naam en datum" onkeydown="if(event.key==='Enter'||event.key==='Escape')closeAdd('proj')" />
+          </div>
+        </div>
+
+        <div class="proj-card" style="opacity:.55">
+          <div class="proj-card-lbl">Afgerond (4)</div>
+          <div class="task" style="padding:10px 0">
+            <div class="pbar pn"></div><div class="cb done"></div>
+            <div class="task-body"><div class="task-txt done">Brief goedgekeurd</div><div class="task-sub"><span class="t-time" style="font-size:11px">2 apr</span></div></div>
+          </div>
+          <div class="task" style="padding:10px 0;border-bottom:none">
+            <div class="pbar pn"></div><div class="cb done"></div>
+            <div class="task-body"><div class="task-txt done">Competitor visual audit</div><div class="task-sub"><span class="t-time" style="font-size:11px">31 mrt</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: MILESTONES -->
+      <div class="proj-tab-content" id="tab-milestones">
+        <div class="proj-card">
+          <div class="proj-card-lbl">Milestones — klik om subtaken te zien</div>
+
+          <!-- MS 1: gedaan -->
+          <div class="ms">
+            <div class="ms-ic ms-done">✓</div>
+            <div class="ms-body">
+              <div class="ms-name done">Brief goedgekeurd</div>
+              <div class="ms-date">2 april · 3/3 taken gedaan</div>
+              <div class="ms-subtasks" style="opacity:.5">
+                <div class="ms-sub"><div class="cb done" style="width:14px;height:14px"></div><div class="ms-sub-txt done">Briefing schrijven</div></div>
+                <div class="ms-sub"><div class="cb done" style="width:14px;height:14px"></div><div class="ms-sub-txt done">Stakeholders akkoord</div></div>
+                <div class="ms-sub" style="border-bottom:none"><div class="cb done" style="width:14px;height:14px"></div><div class="ms-sub-txt done">Brief finaliseren</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MS 2: actief -->
+          <div class="ms">
+            <div class="ms-ic ms-now">●</div>
+            <div class="ms-body">
+              <div class="ms-name">Designs klaar</div>
+              <div class="ms-date now">10 april · 1/3 taken gedaan ← actief</div>
+              <div class="ms-subtasks">
+                <div class="ms-sub" style="opacity:.4"><div class="cb done" style="width:14px;height:14px"></div><div class="ms-sub-txt done">Kleurpalet goedkeuren</div></div>
+                <div class="ms-sub"><div class="cb" style="width:14px;height:14px"></div><div class="ms-sub-txt">Logo systeem finaliseren</div></div>
+                <div class="ms-sub" style="border-bottom:none"><div class="cb" style="width:14px;height:14px"></div><div class="ms-sub-txt">Typografie vastleggen</div></div>
+                <div class="ms-add-sub">
+                  <div class="cap-plus" style="width:16px;height:16px;font-size:12px;border-radius:4px;opacity:.4">+</div>
+                  Subtaak toevoegen
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MS 3 -->
+          <div class="ms">
+            <div class="ms-ic ms-todo">○</div>
+            <div class="ms-body">
+              <div class="ms-name">Review stakeholders</div>
+              <div class="ms-date">25 april · 0/2 taken</div>
+              <div class="ms-subtasks">
+                <div class="ms-sub"><div class="cb" style="width:14px;height:14px"></div><div class="ms-sub-txt">Presentatie voorbereiden</div></div>
+                <div class="ms-sub" style="border-bottom:none"><div class="cb" style="width:14px;height:14px"></div><div class="ms-sub-txt">Feedback verwerken</div></div>
+                <div class="ms-add-sub">
+                  <div class="cap-plus" style="width:16px;height:16px;font-size:12px;border-radius:4px;opacity:.4">+</div>
+                  Subtaak toevoegen
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MS 4 -->
+          <div class="ms" style="border-bottom:none">
+            <div class="ms-ic ms-todo">○</div>
+            <div class="ms-body">
+              <div class="ms-name">Launch</div>
+              <div class="ms-date">1 mei · 0/1 taken</div>
+              <div class="ms-subtasks">
+                <div class="ms-sub" style="border-bottom:none"><div class="cb" style="width:14px;height:14px"></div><div class="ms-sub-txt">Go-live en communicatie</div></div>
+                <div class="ms-add-sub">
+                  <div class="cap-plus" style="width:16px;height:16px;font-size:12px;border-radius:4px;opacity:.4">+</div>
+                  Subtaak toevoegen
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:4px;text-align:center">
+          <div style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:var(--indigo-s);color:var(--indigo);border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;border:1.5px dashed var(--indigo-m)">
+            + Nieuwe milestone toevoegen
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: NOTITIES -->
+      <div class="proj-tab-content" id="tab-notities">
+        <div class="proj-card">
+          <div class="proj-card-lbl">Projectnotities</div>
+          <textarea class="notes-area" placeholder="Schrijf hier vrije notities, inzichten, beslissingen…">Q3 campagne doel: alle designmaterialen klaar voor 1 mei.
+
+Beslissing (2 apr): brand tone moet preciezer aanvoelen — minder algemeen, meer 'precision'. Copy guidelines herzien.
+
+Inzicht: competitor X heeft pricing gewijzigd — impact op onze positionering monitoren.
+
+TODO na launch: retrospective plannen met het team.</textarea>
+        </div>
+        <div style="font-size:11.5px;color:var(--text3);margin-top:8px">Laatste wijziging: vandaag 09:32</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PULSE -->
+  <div class="pulse" style="position:relative">
+    <div class="pulse-hdr">
+      <div class="pulse-title">De Pulse</div>
+      <div class="live-pill"><div class="live-dot"></div>Live</div>
+    </div>
+
+    <div class="tl-scroll">
+      <div style="position:relative">
+        <div class="tl-row"><div class="tl-t">08:00</div><div class="tl-s"></div></div>
+        <div class="tl-row"><div class="tl-t">09:00</div>
+          <div class="tl-s" style="height:52px">
+            <div class="ev ev-out" style="top:3px;height:42px">
+              <div class="ev-t">Team Standup</div><div class="ev-s">09:00 – 09:30</div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-row"><div class="tl-t">10:00</div>
+          <div class="tl-s" style="height:84px">
+            <div class="ev ev-out" style="top:3px;height:74px">
+              <div class="ev-t">Sync: Brand Systems</div><div class="ev-s">Elena & 2 anderen<br>10:00 – 11:00</div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-row"><div class="tl-t">11:00</div><div class="tl-s"></div></div>
+        <div class="tl-row"><div class="tl-t">12:00</div><div class="tl-s"></div></div>
+        <div style="position:relative;height:2px;margin-left:40px"><div class="now-bar"></div></div>
+        <div class="tl-row"><div class="tl-t" style="color:var(--indigo);font-weight:700">13:45</div><div class="tl-s"></div></div>
+        <div class="tl-row"><div class="tl-t">14:00</div>
+          <div class="tl-s" style="height:84px">
+            <div class="ev ev-blk" style="top:3px;height:74px">
+              <div class="ev-t">⊞ Proposal afmaken</div><div class="ev-s">Geblokkeerd · 14:00–15:30</div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-row"><div class="tl-t">16:00</div><div class="tl-s"><div class="drop-tl">+ sleep taak</div></div></div>
+        <div class="tl-row"><div class="tl-t">17:00</div><div class="tl-s"><div class="drop-tl">+ sleep taak</div></div></div>
+        <div class="tl-row"><div class="tl-t">18:00</div><div class="tl-s"></div></div>
+      </div>
+    </div>
+
+    <!-- slide-over -->
+    <div class="so-wrap" id="soWrap">
+      <div class="so-back" onclick="closeSO()"></div>
+      <div class="so-panel">
+        <div class="so-hdr">
+          <div class="so-top">
+            <div class="sb-dot" style="background:#4f46e5;width:8px;height:8px"></div>
+            <div class="so-name">#brand-identity</div>
+            <div class="so-x" onclick="closeSO()">✕</div>
+          </div>
+          <div class="so-stats">
+            <div class="so-stat"><div class="so-sv">3</div><div class="so-sl">Open</div></div>
+            <div class="so-stat"><div class="so-sv">12</div><div class="so-sl">Gedaan</div></div>
+            <div class="so-stat"><div class="so-sv">2</div><div class="so-sl">Notities</div></div>
+          </div>
+          <div class="so-opn" onclick="showProject()">↗ Open volledige projectpagina</div>
+        </div>
+        <div class="so-feed">
+          <div class="so-lbl">Activiteit</div>
+          <div class="frow"><div class="fi fi-o">○</div><div><div class="ftxt">Proposal afmaken voor handover</div><div class="fmeta">Vandaag · @sophie · urgent</div></div></div>
+          <div class="frow"><div class="fi fi-o">○</div><div><div class="ftxt">Investor Deck slides reviewen</div><div class="fmeta">Vr 10:00</div></div></div>
+          <div class="frow fdone"><div class="fi fi-d">✓</div><div><div class="ftxt">Logo systeem export</div><div class="fmeta">Gedaan 2 apr · @elena</div></div></div>
+          <div class="frow"><div class="fi fi-n">📝</div><div><div class="ftxt">Brand tone moet preciezer — copy guidelines herzien</div><div class="fmeta">Notitie · 1 apr</div></div></div>
+          <div class="frow fdone"><div class="fi fi-d">✓</div><div><div class="ftxt">Competitor visual audit</div><div class="fmeta">Gedaan 31 mrt</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── VIEW SWITCHING ──────────────────────────
+  function showMain() {
+    document.getElementById('viewMain').style.display = 'block';
+    document.getElementById('viewFilter').classList.remove('on');
+    document.getElementById('viewProject').classList.remove('on');
+    setSb('sb-main');
+  }
+  function showFilter(name, color) {
+    document.getElementById('viewMain').style.display = 'none';
+    document.getElementById('viewProject').classList.remove('on');
+    document.getElementById('viewFilter').classList.add('on');
+    document.getElementById('fName').textContent = name;
+    document.getElementById('fDot').style.background = color;
+    closeSO();
+  }
+  function showProject() {
+    document.getElementById('viewMain').style.display = 'none';
+    document.getElementById('viewFilter').classList.remove('on');
+    document.getElementById('viewProject').classList.add('on');
+    setSb('sb-bi');
+    closeSO();
+  }
+  function setSb(id) {
+    document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+    if (id) document.getElementById(id)?.classList.add('active');
+  }
+  function closeSO() { document.getElementById('soWrap').classList.remove('on'); }
+  function focusCap() { document.getElementById('capInput').focus(); }
+
+  // ── PROJECT TABS ─────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.proj-tab-content').forEach(el => el.classList.remove('on'));
+    document.querySelectorAll('.proj-tab').forEach(el => el.classList.remove('on'));
+    document.getElementById('tab-' + name).classList.add('on');
+    event.target.classList.add('on');
+  }
+
+  // ── INLINE ADD ───────────────────────────────
+  function openAdd(section) {
+    const row = document.getElementById('add-' + section);
+    if (!row) return;
+    row.classList.add('open');
+    row.querySelector('.add-task-input').focus();
+  }
+  function closeAdd(section) {
+    const row = document.getElementById('add-' + section);
+    if (!row) return;
+    row.classList.remove('open');
+    row.querySelector('.add-task-input').value = '';
+  }
+
+  // ── CAPTURE CHIPS ────────────────────────────
+  function parseChips(val) {
+    const el = document.getElementById('capChips');
+    if (!val.trim()) { el.innerHTML = ''; return; }
+    const parts = [];
+    const chip = (txt, bg, cl, bc) =>
+      `<span class="chip" style="background:${bg};color:${cl};border-color:${bc}">${txt}</span>`;
+    if (/^note:/i.test(val)) parts.push(chip('📝 Notitie','#fffbeb','#d97706','#fde68a'));
+    if (val.includes('!!'))  parts.push(chip('!! Urgent','#fff5f5','#e53e3e','#fecaca'));
+    else if (val.includes('!')) parts.push(chip('! High','#fffbeb','#d97706','#fde68a'));
+    (val.match(/#\w+/g)||[]).forEach(p => parts.push(chip(p,'#eeeeff','#4f46e5','#c7d0fb')));
+    (val.match(/@\w+/g)||[]).forEach(p => parts.push(chip(p,'#f0fdf4','#16a34a','#bbf7d0')));
+    const dkw = ['vandaag','morgen','maandag','dinsdag','woensdag','donderdag','vrijdag'];
+    if (dkw.some(d => val.toLowerCase().includes(d)) || /\d{1,2}:\d{2}/.test(val))
+      parts.push(chip('📅 Datum','#eff6ff','#2563eb','#bfdbfe'));
+    const dur = val.match(/~(\d+)(m|h)/);
+    if (dur) {
+      const m = dur[2]==='h' ? parseInt(dur[1])*60 : parseInt(dur[1]);
+      parts.push(chip(`⏱ ${m}m`,'#fffbeb','#d97706','#fde68a'));
+    }
+    el.innerHTML = parts.join('');
+  }
+
+  // ── DRAG & DROP (between sections) ───────────
+  let dragSrc = null;
+
+  function dragStart(e, section, idx) {
+    dragSrc = { section, idx };
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function dragOver(e, targetSection) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    // highlight target list
+    const list = document.getElementById('list-' + targetSection);
+    list.style.background = 'rgba(79,70,229,.03)';
+    list.style.borderRadius = '10px';
+  }
+
+  function dragLeave(e) {
+    const list = e.currentTarget;
+    list.style.background = '';
+  }
+
+  function drop(e, targetSection) {
+    e.preventDefault();
+    const list = document.getElementById('list-' + targetSection);
+    list.style.background = '';
+
+    if (!dragSrc) return;
+    if (dragSrc.section === targetSection) {
+      dragSrc = null; return; // same section — reorder not fully implemented in mockup
+    }
+
+    // Move the dragged element to the target list
+    const srcList = document.getElementById('list-' + dragSrc.section);
+    const tasks = srcList.querySelectorAll('.task');
+    const draggedEl = tasks[dragSrc.idx];
+
+    if (draggedEl) {
+      draggedEl.classList.remove('dragging');
+      // Show brief section label change
+      const timeEl = draggedEl.querySelector('.t-time');
+      if (timeEl) {
+        const labels = { today:'Vandaag', tomorrow:'Morgen', week:'Deze week' };
+        timeEl.textContent = labels[targetSection] || targetSection;
+        timeEl.classList.remove('ov');
+      }
+      list.insertBefore(draggedEl, list.firstChild);
+    }
+    dragSrc = null;
+  }
+
+  document.addEventListener('dragend', () => {
+    document.querySelectorAll('.task.dragging').forEach(el => el.classList.remove('dragging'));
+    document.querySelectorAll('[id^="list-"]').forEach(el => { el.style.background=''; el.style.borderRadius=''; });
+  });
+
+  // ── KEYBOARD ─────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeSO();
+      document.activeElement.blur();
+    }
+    if ((e.key === 'n' || e.key === 'c') && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      focusCap();
+    }
+  });
+</script>
+</body>
+</html>

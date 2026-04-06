@@ -1,0 +1,6 @@
+{
+  "supabaseUrl":  "https://xxxxxxxxxxxx.supabase.co",
+  "supabaseKey":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "daysAhead":    7,
+  "logFile":      "sync_errors.log"
+}

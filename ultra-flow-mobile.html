@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ultra-Flow — Mobile</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family:'Inter',-apple-system,sans-serif;
+      background:#d1d5e8;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:40px 20px;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* ── PHONE FRAME ── */
+    .phone {
+      width:390px;
+      height:844px;
+      background:#f5f6fb;
+      border-radius:52px;
+      box-shadow:
+        0 0 0 10px #1a1a2e,
+        0 0 0 12px #2a2a3e,
+        0 40px 80px rgba(0,0,0,.4);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      position:relative;
+    }
+
+    /* status bar */
+    .status-bar {
+      height:50px;
+      background:#fff;
+      display:flex;
+      align-items:flex-end;
+      padding:0 28px 10px;
+      flex-shrink:0;
+      z-index:30;
+    }
+    .status-time { font-size:15px; font-weight:700; color:#0f1117; }
+    .status-icons { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:13px; color:#0f1117; }
+
+    /* ── VARIABLES ── */
+    :root {
+      --bg:       #f5f6fb;
+      --surface:  #ffffff;
+      --border:   #e8e9f2;
+      --border2:  #f0f1f8;
+      --indigo:   #4f46e5;
+      --indigo-s: #eeeeff;
+      --indigo-m: #a5b4fc;
+      --text:     #0f1117;
+      --text2:    #6b7080;
+      --text3:    #b0b5c8;
+      --urgent:   #e53e3e;
+      --amber:    #d97706;
+      --green:    #16a34a;
+      --red-bg:   #fff5f5;
+    }
+
+    /* ── SCROLL AREA ── */
+    .screen {
+      flex:1;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      position:relative;
+    }
+
+    /* each view */
+    .view {
+      position:absolute;
+      inset:0;
+      display:none;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .view.on { display:flex; }
+
+    /* ── NAV HEADER ── */
+    .nav-hdr {
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+      padding:14px 20px 12px;
+      flex-shrink:0;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .nav-title { font-size:20px; font-weight:800; letter-spacing:-.4px; flex:1; }
+    .nav-sub   { font-size:12.5px; color:var(--text3); margin-top:1px; }
+    .nav-icon-btn {
+      width:36px; height:36px; border-radius:10px;
+      background:var(--bg); border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; color:var(--text2); cursor:pointer;
+    }
+
+    /* ── SCROLL CONTENT ── */
+    .scroll {
+      flex:1;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      padding-bottom:100px;
+    }
+    .scroll::-webkit-scrollbar { display:none; }
+
+    /* ── SECTIONS ── */
+    .section { padding:20px 20px 0; }
+
+    .sec-hdr {
+      display:flex; align-items:baseline; gap:8px;
+      padding-bottom:10px;
+      border-bottom:1px solid var(--border);
+    }
+    .sec-title { font-size:14px; font-weight:700; letter-spacing:-.1px; }
+    .sec-sub   { font-size:11.5px; color:var(--text3); }
+    .sec-ct    { margin-left:auto; font-size:11.5px; color:var(--text3); }
+
+    /* ── TASK ROW ── */
+    .task {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:14px 4px;
+      border-bottom:1px solid var(--border2);
+      cursor:default;
+      position:relative;
+    }
+    .task:last-of-type { border-bottom:none; }
+
+    /* swipe hint overlay */
+    .task-swipe-hint {
+      position:absolute;
+      left:0; top:0; bottom:0;
+      display:flex; align-items:center;
+      padding-left:12px;
+      background:linear-gradient(to right, #f0fdf4, transparent);
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .2s;
+      border-radius:8px;
+      font-size:11px; font-weight:600; color:var(--green);
+      gap:5px;
+    }
+
+    .cb {
+      width:22px; height:22px; border-radius:50%;
+      border:1.5px solid var(--border);
+      flex-shrink:0; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:all .15s;
+    }
+    .cb:active { border-color:var(--indigo); background:var(--indigo-s); }
+    .cb.done   { background:var(--indigo); border-color:var(--indigo); }
+    .cb.done::after { content:'✓'; font-size:11px; color:#fff; font-weight:700; }
+    .cb.ov     { border-color:#fca5a5; }
+
+    .pbar { width:3px; border-radius:3px; flex-shrink:0; align-self:stretch; min-height:18px; }
+    .pu { background:var(--urgent); }
+    .ph { background:var(--amber); }
+    .pn { background:transparent; }
+
+    .task-body { flex:1; min-width:0; }
+    .task-txt  { font-size:15px; font-weight:500; color:var(--text); line-height:1.35; }
+    .task-txt.done { text-decoration:line-through; color:var(--text3); font-weight:400; }
+    .task-txt.ov   { color:var(--urgent); }
+
+    .task-sub { display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap; }
+    .tp   { font-size:11px; font-weight:600; color:var(--indigo); display:flex; align-items:center; gap:3px; }
+    .tp-d { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+    .tper { font-size:11px; font-weight:500; color:var(--text2); }
+
+    .task-r { display:flex; flex-direction:column; align-items:flex-end; gap:3px; flex-shrink:0; }
+    .t-time { font-size:11.5px; font-weight:500; color:var(--text3); white-space:nowrap; }
+    .t-time.ov { color:var(--urgent); font-weight:600; }
+    .pl { font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+    .plu { color:var(--urgent); }
+    .plh { color:var(--amber); }
+
+    .task.ov-row {
+      background:var(--red-bg); border-radius:12px;
+      padding:13px 10px; margin-top:2px; border:none;
+    }
+
+    /* Inline add row */
+    .add-row {
+      display:flex; align-items:center; gap:10px;
+      padding:13px 4px;
+      color:var(--text3); font-size:13.5px;
+      cursor:pointer;
+      border-top:1px solid var(--border2);
+      transition:color .12s;
+    }
+    .add-row:active { color:var(--indigo); }
+    .add-icon {
+      width:22px; height:22px; border-radius:6px;
+      background:var(--indigo-s); color:var(--indigo);
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; font-weight:300; flex-shrink:0;
+    }
+
+    /* ── FAB ── */
+    .fab {
+      position:absolute;
+      bottom:86px; right:20px;
+      width:56px; height:56px;
+      border-radius:18px;
+      background:var(--indigo);
+      color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      font-size:26px; font-weight:300;
+      box-shadow:0 4px 20px rgba(79,70,229,.4);
+      cursor:pointer;
+      z-index:20;
+      transition:transform .1s, box-shadow .1s;
+    }
+    .fab:active { transform:scale(.93); box-shadow:0 2px 12px rgba(79,70,229,.3); }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      position:absolute;
+      bottom:0; left:0; right:0;
+      height:82px;
+      background:var(--surface);
+      border-top:1px solid var(--border);
+      display:flex;
+      align-items:flex-start;
+      padding-top:10px;
+      z-index:25;
+    }
+    .bn-item {
+      flex:1;
+      display:flex; flex-direction:column; align-items:center; gap:3px;
+      cursor:pointer;
+      padding-top:2px;
+    }
+    .bn-icon { font-size:20px; color:var(--text3); transition:color .15s; }
+    .bn-lbl  { font-size:10px; font-weight:600; color:var(--text3); transition:color .15s; }
+    .bn-item.active .bn-icon { color:var(--indigo); }
+    .bn-item.active .bn-lbl  { color:var(--indigo); }
+    .bn-dot {
+      width:4px; height:4px; border-radius:50%;
+      background:var(--indigo); margin-top:-2px;
+      opacity:0;
+    }
+    .bn-item.active .bn-dot { opacity:1; }
+
+    /* ── BOTTOM SHEET (quick capture) ── */
+    .sheet-backdrop {
+      position:absolute; inset:0;
+      background:rgba(15,17,23,.25);
+      backdrop-filter:blur(2px);
+      z-index:40;
+      display:none;
+      opacity:0;
+      transition:opacity .25s;
+    }
+    .sheet-backdrop.on { display:block; opacity:1; }
+
+    .sheet {
+      position:absolute;
+      bottom:0; left:0; right:0;
+      background:var(--surface);
+      border-radius:24px 24px 0 0;
+      padding:0 0 30px;
+      z-index:50;
+      transform:translateY(100%);
+      transition:transform .3s cubic-bezier(.32,.72,0,1);
+      box-shadow:0 -4px 30px rgba(0,0,0,.12);
+    }
+    .sheet.on { transform:translateY(0); }
+
+    .sheet-handle {
+      display:flex; justify-content:center;
+      padding:12px 0 8px;
+    }
+    .sheet-handle-bar {
+      width:36px; height:4px; border-radius:4px;
+      background:var(--border);
+    }
+    .sheet-title {
+      font-size:11px; font-weight:700; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--indigo);
+      padding:0 20px 10px;
+    }
+    .sheet-input-wrap {
+      margin:0 16px;
+      background:var(--bg);
+      border:1.5px solid var(--border);
+      border-radius:14px;
+      padding:14px 16px;
+      transition:border-color .2s;
+    }
+    .sheet-input-wrap:focus-within { border-color:var(--indigo-m); }
+    .sheet-input {
+      width:100%; background:none; border:none; outline:none;
+      font-size:16px; font-family:inherit; color:var(--text);
+      caret-color:var(--indigo); line-height:1.4;
+      min-height:28px;
+    }
+    .sheet-input::placeholder { color:var(--text3); }
+
+    .sheet-chips {
+      display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;
+    }
+    .s-chip {
+      font-size:11px; font-weight:600; padding:3px 9px;
+      border-radius:20px; border:1px solid; white-space:nowrap;
+    }
+
+    .sheet-quick-btns {
+      display:flex; gap:8px; padding:12px 16px 4px;
+      overflow-x:auto; -webkit-overflow-scrolling:touch;
+    }
+    .sheet-quick-btns::-webkit-scrollbar { display:none; }
+    .qbtn {
+      display:flex; align-items:center; gap:5px;
+      padding:7px 12px;
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:20px; font-size:12px; font-weight:500;
+      color:var(--text2); white-space:nowrap; cursor:pointer;
+      flex-shrink:0;
+      transition:all .15s;
+    }
+    .qbtn:active { background:var(--indigo-s); border-color:var(--indigo-m); color:var(--indigo); }
+    .qbtn-ic { font-size:13px; }
+
+    .sheet-footer {
+      display:flex; align-items:center;
+      padding:12px 16px 0;
+      gap:10px;
+    }
+    .sheet-cancel {
+      font-size:14px; font-weight:500; color:var(--text3);
+      cursor:pointer; padding:6px 0;
+    }
+    .sheet-save {
+      margin-left:auto;
+      padding:10px 22px;
+      background:var(--indigo); color:#fff;
+      border-radius:12px; font-size:14px; font-weight:600;
+      cursor:pointer;
+      box-shadow:0 2px 10px rgba(79,70,229,.3);
+    }
+    .sheet-save:active { filter:brightness(.9); }
+
+    /* ── PROJECTS VIEW ── */
+    .proj-list { padding:16px 20px; }
+    .proj-item {
+      display:flex; align-items:center; gap:13px;
+      padding:16px 0;
+      border-bottom:1px solid var(--border2);
+      cursor:pointer;
+    }
+    .proj-item:last-child { border-bottom:none; }
+    .proj-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .proj-info { flex:1; }
+    .proj-name { font-size:15px; font-weight:600; color:var(--text); }
+    .proj-meta { font-size:12px; color:var(--text3); margin-top:2px; }
+    .proj-badge {
+      font-size:11px; font-weight:700;
+      padding:3px 9px; border-radius:20px;
+      background:var(--indigo-s); color:var(--indigo);
+    }
+    .proj-badge.red { background:var(--red-bg); color:var(--urgent); }
+    .proj-arrow { font-size:14px; color:var(--text3); }
+
+    /* ── PROJECT DETAIL ── */
+    .proj-detail-hdr {
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+      padding:14px 20px 0;
+      flex-shrink:0;
+    }
+    .proj-detail-back {
+      font-size:12px; color:var(--indigo); cursor:pointer;
+      display:flex; align-items:center; gap:4px;
+      margin-bottom:10px;
+    }
+    .proj-detail-name { font-size:19px; font-weight:800; letter-spacing:-.3px; margin-bottom:4px; display:flex; align-items:center; gap:9px; }
+    .proj-detail-status { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; background:#f0fdf4; color:var(--green); text-transform:uppercase; }
+    .proj-detail-dl { font-size:12px; color:var(--text3); margin-bottom:12px; }
+    .proj-seg {
+      display:flex; gap:0; margin-top:2px;
+    }
+    .proj-seg-btn {
+      flex:1; text-align:center;
+      padding:9px 0;
+      font-size:13px; font-weight:500;
+      color:var(--text2); cursor:pointer;
+      border-bottom:2px solid transparent;
+      transition:all .12s;
+    }
+    .proj-seg-btn.on { color:var(--indigo); border-bottom-color:var(--indigo); font-weight:600; }
+
+    /* ms mobile */
+    .ms-m {
+      padding:16px 20px;
+      border-bottom:1px solid var(--border2);
+    }
+    .ms-m-hdr { display:flex; align-items:center; gap:10px; }
+    .ms-m-ic { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+    .ms-m-done { background:#f0fdf4; color:var(--green); }
+    .ms-m-now  { background:var(--indigo-s); color:var(--indigo); }
+    .ms-m-todo { border:1.5px solid var(--border); color:var(--text3); }
+    .ms-m-name { font-size:14.5px; font-weight:600; flex:1; }
+    .ms-m-name.done { text-decoration:line-through; color:var(--text3); font-weight:400; }
+    .ms-m-date { font-size:11.5px; color:var(--text2); }
+    .ms-m-date.now { color:var(--indigo); font-weight:600; }
+    .ms-m-sub { font-size:12px; color:var(--text3); margin-top:4px; margin-left:34px; }
+
+    /* ── TODAY COMPACT HEADER ── */
+    .today-greeting {
+      padding:18px 20px 0;
+    }
+    .tg-date { font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text3); margin-bottom:4px; }
+    .tg-title { font-size:24px; font-weight:800; letter-spacing:-.5px; }
+    .tg-sub   { font-size:13px; color:var(--text2); margin-top:3px; }
+
+    /* overdue banner */
+    .ov-banner {
+      margin:16px 20px 0;
+      background:var(--red-bg);
+      border:1px solid #fecaca;
+      border-radius:12px;
+      padding:11px 14px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .ov-ic { font-size:16px; }
+    .ov-txt { font-size:13px; font-weight:500; color:var(--urgent); flex:1; }
+    .ov-txt span { color:var(--text); }
+    .ov-arrow { font-size:14px; color:#fca5a5; }
+  </style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-time">9:41</div>
+    <div class="status-icons">▲ ◆ ⬛</div>
+  </div>
+
+  <div class="screen">
+
+    <!-- ══════════════════════════════════════
+         VIEW: VANDAAG
+    ══════════════════════════════════════ -->
+    <div class="view on" id="v-today">
+      <div class="nav-hdr">
+        <div>
+          <div class="nav-title">Vandaag</div>
+          <div class="nav-sub">zondag 5 april · 3 open</div>
+        </div>
+        <div class="nav-icon-btn">☰</div>
+      </div>
+
+      <div class="scroll">
+
+        <!-- Overdue banner -->
+        <div class="ov-banner" onclick="">
+          <div class="ov-ic">⚠</div>
+          <div class="ov-txt"><span>Research samenvatting</span> stond op gisteren</div>
+          <div class="ov-arrow">›</div>
+        </div>
+
+        <!-- Vandaag taken -->
+        <div class="section" style="margin-top:18px">
+          <div class="sec-hdr">
+            <span class="sec-title">Vandaag</span>
+            <span class="sec-sub">5 april</span>
+            <span class="sec-ct">3 open</span>
+          </div>
+
+          <div class="task">
+            <div class="pbar pu"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Proposal afmaken voor handover</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#4f46e5"></span>#brand-identity</span>
+                <span class="tper">@sophie</span>
+              </div>
+            </div>
+            <div class="task-r">
+              <span class="t-time">16:00</span>
+              <span class="pl plu">Urgent</span>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="pbar pn"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Server migratie checklist</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#3b82f6"></span>#infrastructure</span>
+              </div>
+            </div>
+            <div class="task-r">
+              <span class="t-time">14:00</span>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="pbar ph"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Call re curriculum module 3</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#a78bfa"></span>#curriculum</span>
+                <span class="tper">@lena</span>
+              </div>
+            </div>
+            <div class="task-r">
+              <span class="t-time">15:00</span>
+              <span class="pl plh">High</span>
+            </div>
+          </div>
+
+          <div class="task" style="opacity:.38">
+            <div class="pbar pn"></div>
+            <div class="cb done"></div>
+            <div class="task-body">
+              <div class="task-txt done">Analytics dashboard setup</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#f59e0b"></span>#aero-v2</span>
+                <span style="font-size:11px;color:var(--text3)">Gedaan 09:14</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="add-row" onclick="openSheet()">
+            <div class="add-icon">+</div>
+            Taak toevoegen aan Vandaag
+          </div>
+        </div>
+
+        <!-- Morgen -->
+        <div class="section" style="margin-top:20px">
+          <div class="sec-hdr">
+            <span class="sec-title">Morgen</span>
+            <span class="sec-sub">maandag 6 apr</span>
+            <span class="sec-ct">2 open</span>
+          </div>
+
+          <div class="task">
+            <div class="pbar pn"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Investor Deck slides reviewen</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#4f46e5"></span>#brand-identity</span>
+              </div>
+            </div>
+            <div class="task-r">
+              <span class="t-time">10:00</span>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="pbar pn"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Note: Hybride onderwijs findings — follow-up verkennen</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#22c55e"></span>#research</span>
+                <span style="font-size:11px;color:var(--amber);font-weight:500">📝 Notitie</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="add-row" onclick="openSheet()">
+            <div class="add-icon">+</div>
+            Taak toevoegen aan Morgen
+          </div>
+        </div>
+
+        <!-- Deze week -->
+        <div class="section" style="margin-top:20px">
+          <div class="sec-hdr">
+            <span class="sec-title">Deze week</span>
+            <span class="sec-sub">di – zo</span>
+            <span class="sec-ct">3 open</span>
+          </div>
+
+          <div class="task">
+            <div class="pbar pn"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Sprint Grooming bijwonen</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#f59e0b"></span>#aero-v2</span>
+              </div>
+            </div>
+            <div class="task-r"><span class="t-time">Wo 14:00</span></div>
+          </div>
+
+          <div class="task">
+            <div class="pbar pn"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Documentation architecture tokens</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#3b82f6"></span>#infrastructure</span>
+              </div>
+            </div>
+            <div class="task-r"><span class="t-time">Do</span></div>
+          </div>
+
+          <div class="task">
+            <div class="pbar pn"></div>
+            <div class="cb"></div>
+            <div class="task-body">
+              <div class="task-txt">Infrastructuur docs updaten na migratie</div>
+              <div class="task-sub">
+                <span class="tp"><span class="tp-d" style="background:#3b82f6"></span>#infrastructure</span>
+              </div>
+            </div>
+            <div class="task-r"><span class="t-time">Vr</span></div>
+          </div>
+
+          <div class="add-row" onclick="openSheet()">
+            <div class="add-icon">+</div>
+            Taak toevoegen aan Deze week
+          </div>
+        </div>
+
+      </div><!-- /scroll -->
+
+      <!-- FAB -->
+      <div class="fab" onclick="openSheet()">+</div>
+
+      <!-- BOTTOM NAV -->
+      <div class="bottom-nav">
+        <div class="bn-item active" onclick="switchView('today',0)">
+          <div class="bn-icon">○</div>
+          <div class="bn-lbl">Vandaag</div>
+          <div class="bn-dot"></div>
+        </div>
+        <div class="bn-item" onclick="switchView('week',1)">
+          <div class="bn-icon">☰</div>
+          <div class="bn-lbl">Week</div>
+          <div class="bn-dot"></div>
+        </div>
+        <div style="flex:1"></div><!-- space for FAB -->
+        <div class="bn-item" onclick="switchView('projects',3)">
+          <div class="bn-icon">⊙</div>
+          <div class="bn-lbl">Projecten</div>
+          <div class="bn-dot"></div>
+        </div>
+        <div class="bn-item" onclick="switchView('pulse',4)">
+          <div class="bn-icon">⊞</div>
+          <div class="bn-lbl">Agenda</div>
+          <div class="bn-dot"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         VIEW: WEEK (all tasks flat)
+    ══════════════════════════════════════ -->
+    <div class="view" id="v-week">
+      <div class="nav-hdr">
+        <div>
+          <div class="nav-title">Deze week</div>
+          <div class="nav-sub">5 – 11 april · 8 open</div>
+        </div>
+      </div>
+      <div class="scroll">
+        <div class="section" style="margin-top:10px">
+          <div class="sec-hdr"><span class="sec-title" style="color:var(--urgent)">Overdue</span><span class="sec-ct">1</span></div>
+          <div class="task ov-row">
+            <div class="pbar pu"></div>
+            <div class="cb ov"></div>
+            <div class="task-body"><div class="task-txt ov">Research samenvatting doorsturen</div><div class="task-sub"><span class="tper">@thomas</span></div></div>
+            <div class="task-r"><span class="t-time ov">Gisteren</span></div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top:16px">
+          <div class="sec-hdr"><span class="sec-title">Vandaag</span><span class="sec-sub">zo 5 apr</span><span class="sec-ct">3</span></div>
+          <div class="task"><div class="pbar pu"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Proposal afmaken</div><div class="task-sub"><span class="tp"><span class="tp-d" style="background:#4f46e5"></span>#brand-identity</span></div></div><div class="task-r"><span class="t-time">16:00</span><span class="pl plu">Urgent</span></div></div>
+          <div class="task"><div class="pbar pn"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Server migratie checklist</div></div><div class="task-r"><span class="t-time">14:00</span></div></div>
+          <div class="task"><div class="pbar ph"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Call curriculum module 3</div><div class="task-sub"><span class="tper">@lena</span></div></div><div class="task-r"><span class="t-time">15:00</span></div></div>
+        </div>
+
+        <div class="section" style="margin-top:16px">
+          <div class="sec-hdr"><span class="sec-title">Morgen</span><span class="sec-sub">ma 6 apr</span><span class="sec-ct">2</span></div>
+          <div class="task"><div class="pbar pn"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Investor Deck slides reviewen</div><div class="task-sub"><span class="tp"><span class="tp-d" style="background:#4f46e5"></span>#brand-identity</span></div></div><div class="task-r"><span class="t-time">10:00</span></div></div>
+          <div class="task"><div class="pbar pn"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Hybride onderwijs follow-up</div><div class="task-sub"><span class="tp"><span class="tp-d" style="background:#22c55e"></span>#research</span></div></div></div>
+        </div>
+
+        <div class="section" style="margin-top:16px">
+          <div class="sec-hdr"><span class="sec-title">Woensdag</span><span class="sec-sub">wo 8 apr</span></div>
+          <div class="task"><div class="pbar pn"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Sprint Grooming bijwonen</div><div class="task-sub"><span class="tp"><span class="tp-d" style="background:#f59e0b"></span>#aero-v2</span></div></div><div class="task-r"><span class="t-time">14:00</span></div></div>
+        </div>
+
+        <div class="section" style="margin-top:16px">
+          <div class="sec-hdr"><span class="sec-title">Donderdag</span><span class="sec-sub">do 9 apr</span></div>
+          <div class="task"><div class="pbar pn"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Documentation architecture tokens</div><div class="task-sub"><span class="tp"><span class="tp-d" style="background:#3b82f6"></span>#infrastructure</span></div></div></div>
+        </div>
+      </div>
+
+      <div class="fab" onclick="openSheet()">+</div>
+      <div class="bottom-nav">
+        <div class="bn-item" onclick="switchView('today',0)"><div class="bn-icon">○</div><div class="bn-lbl">Vandaag</div><div class="bn-dot"></div></div>
+        <div class="bn-item active" onclick="switchView('week',1)"><div class="bn-icon">☰</div><div class="bn-lbl">Week</div><div class="bn-dot"></div></div>
+        <div style="flex:1"></div>
+        <div class="bn-item" onclick="switchView('projects',3)"><div class="bn-icon">⊙</div><div class="bn-lbl">Projecten</div><div class="bn-dot"></div></div>
+        <div class="bn-item" onclick="switchView('pulse',4)"><div class="bn-icon">⊞</div><div class="bn-lbl">Agenda</div><div class="bn-dot"></div></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         VIEW: PROJECTEN
+    ══════════════════════════════════════ -->
+    <div class="view" id="v-projects">
+      <div class="nav-hdr">
+        <div class="nav-title">Projecten</div>
+        <div class="nav-icon-btn" style="background:var(--indigo);border-color:var(--indigo);color:#fff">+</div>
+      </div>
+      <div class="scroll">
+        <div class="proj-list">
+
+          <div class="proj-item" onclick="switchView('proj-detail',99)">
+            <div class="proj-dot" style="background:#4f46e5"></div>
+            <div class="proj-info">
+              <div class="proj-name">Brand Identity</div>
+              <div class="proj-meta">5 open · deadline 1 mei</div>
+            </div>
+            <div class="proj-badge red">3 urgent</div>
+            <div class="proj-arrow">›</div>
+          </div>
+
+          <div class="proj-item">
+            <div class="proj-dot" style="background:#f59e0b"></div>
+            <div class="proj-info">
+              <div class="proj-name">Aero v2.0</div>
+              <div class="proj-meta">2 open</div>
+            </div>
+            <div class="proj-badge">2</div>
+            <div class="proj-arrow">›</div>
+          </div>
+
+          <div class="proj-item">
+            <div class="proj-dot" style="background:#22c55e"></div>
+            <div class="proj-info">
+              <div class="proj-name">Research</div>
+              <div class="proj-meta">1 open</div>
+            </div>
+            <div class="proj-badge">1</div>
+            <div class="proj-arrow">›</div>
+          </div>
+
+          <div class="proj-item" style="border-bottom:none">
+            <div class="proj-dot" style="background:#3b82f6"></div>
+            <div class="proj-info">
+              <div class="proj-name">Infrastructure</div>
+              <div class="proj-meta">4 open</div>
+            </div>
+            <div class="proj-badge">4</div>
+            <div class="proj-arrow">›</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="bn-item" onclick="switchView('today',0)"><div class="bn-icon">○</div><div class="bn-lbl">Vandaag</div><div class="bn-dot"></div></div>
+        <div class="bn-item" onclick="switchView('week',1)"><div class="bn-icon">☰</div><div class="bn-lbl">Week</div><div class="bn-dot"></div></div>
+        <div style="flex:1"></div>
+        <div class="bn-item active" onclick="switchView('projects',3)"><div class="bn-icon">⊙</div><div class="bn-lbl">Projecten</div><div class="bn-dot"></div></div>
+        <div class="bn-item" onclick="switchView('pulse',4)"><div class="bn-icon">⊞</div><div class="bn-lbl">Agenda</div><div class="bn-dot"></div></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         VIEW: PROJECT DETAIL
+    ══════════════════════════════════════ -->
+    <div class="view" id="v-proj-detail">
+      <div class="proj-detail-hdr">
+        <div class="proj-detail-back" onclick="switchView('projects',3)">‹ Projecten</div>
+        <div class="proj-detail-name">
+          <div class="proj-dot" style="background:#4f46e5;width:10px;height:10px"></div>
+          Brand Identity
+          <div class="proj-detail-status">Actief</div>
+        </div>
+        <div class="proj-detail-dl">Deadline 1 mei 2026</div>
+        <div class="proj-seg">
+          <div class="proj-seg-btn on" onclick="switchProjTab('pt-taken',this)">Taken</div>
+          <div class="proj-seg-btn" onclick="switchProjTab('pt-ms',this)">Milestones</div>
+          <div class="proj-seg-btn" onclick="switchProjTab('pt-notities',this)">Notities</div>
+        </div>
+      </div>
+
+      <!-- TAKEN TAB -->
+      <div class="scroll" id="pt-taken">
+        <div class="section" style="margin-top:10px">
+          <div class="sec-hdr"><span class="sec-title">Open</span><span class="sec-ct">5</span></div>
+          <div class="task"><div class="pbar pu"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Proposal afmaken voor handover</div><div class="task-sub"><span class="tper">@sophie</span></div></div><div class="task-r"><span class="t-time">Vandaag</span><span class="pl plu">Urgent</span></div></div>
+          <div class="task"><div class="pbar pn"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Investor Deck slides reviewen</div></div><div class="task-r"><span class="t-time">Vr 10:00</span></div></div>
+          <div class="task"><div class="pbar pn"></div><div class="cb"></div><div class="task-body"><div class="task-txt">Logo systeem export voor print</div><div class="task-sub"><span class="tper">@elena</span></div></div><div class="task-r"><span class="t-time">9 apr</span></div></div>
+          <div class="add-row" onclick="openSheet()">
+            <div class="add-icon">+</div>
+            Taak toevoegen
+          </div>
+        </div>
+        <div class="section" style="margin-top:16px; opacity:.4">
+          <div class="sec-hdr"><span class="sec-title" style="color:var(--text2)">Afgerond</span><span class="sec-ct">4</span></div>
+          <div class="task"><div class="pbar pn"></div><div class="cb done"></div><div class="task-body"><div class="task-txt done">Brief goedgekeurd</div></div></div>
+          <div class="task" style="border:none"><div class="pbar pn"></div><div class="cb done"></div><div class="task-body"><div class="task-txt done">Competitor visual audit</div></div></div>
+        </div>
+      </div>
+
+      <!-- MILESTONES TAB -->
+      <div class="scroll" id="pt-ms" style="display:none">
+        <div class="ms-m" style="opacity:.55">
+          <div class="ms-m-hdr">
+            <div class="ms-m-ic ms-m-done">✓</div>
+            <div class="ms-m-name done">Brief goedgekeurd</div>
+            <div class="ms-m-date">2 apr</div>
+          </div>
+          <div class="ms-m-sub">3/3 taken gedaan</div>
+        </div>
+        <div class="ms-m">
+          <div class="ms-m-hdr">
+            <div class="ms-m-ic ms-m-now">●</div>
+            <div class="ms-m-name">Designs klaar</div>
+            <div class="ms-m-date now">10 apr ← nu</div>
+          </div>
+          <div class="ms-m-sub">1/3 taken gedaan</div>
+          <div style="margin-top:10px;padding-left:34px">
+            <div class="task" style="padding:10px 0"><div class="pbar pn"></div><div class="cb" style="width:18px;height:18px"></div><div class="task-body"><div class="task-txt" style="font-size:13.5px">Logo systeem finaliseren</div></div></div>
+            <div class="task" style="padding:10px 0"><div class="pbar pn"></div><div class="cb" style="width:18px;height:18px"></div><div class="task-body"><div class="task-txt" style="font-size:13.5px">Typografie vastleggen</div></div></div>
+            <div class="task" style="padding:10px 0;opacity:.4;border:none"><div class="pbar pn"></div><div class="cb done" style="width:18px;height:18px"></div><div class="task-body"><div class="task-txt done" style="font-size:13.5px">Kleurpalet goedkeuren</div></div></div>
+          </div>
+        </div>
+        <div class="ms-m">
+          <div class="ms-m-hdr">
+            <div class="ms-m-ic ms-m-todo">○</div>
+            <div class="ms-m-name">Review stakeholders</div>
+            <div class="ms-m-date">25 apr</div>
+          </div>
+          <div class="ms-m-sub">0/2 taken gedaan</div>
+        </div>
+        <div class="ms-m" style="border:none">
+          <div class="ms-m-hdr">
+            <div class="ms-m-ic ms-m-todo">○</div>
+            <div class="ms-m-name">Launch</div>
+            <div class="ms-m-date">1 mei</div>
+          </div>
+          <div class="ms-m-sub">0/1 taken gedaan</div>
+        </div>
+      </div>
+
+      <!-- NOTITIES TAB -->
+      <div class="scroll" id="pt-notities" style="display:none">
+        <div style="padding:16px 20px">
+          <textarea style="width:100%;min-height:300px;background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px;font-size:14px;font-family:inherit;color:var(--text);resize:none;outline:none;line-height:1.7">Q3 campagne doel: alle designmaterialen klaar voor 1 mei.
+
+Beslissing (2 apr): brand tone moet preciezer — copy guidelines herzien.
+
+Inzicht: competitor X heeft pricing gewijzigd — impact monitoren.</textarea>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:8px">Laatste wijziging: vandaag 09:32</div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="bn-item" onclick="switchView('today',0)"><div class="bn-icon">○</div><div class="bn-lbl">Vandaag</div><div class="bn-dot"></div></div>
+        <div class="bn-item" onclick="switchView('week',1)"><div class="bn-icon">☰</div><div class="bn-lbl">Week</div><div class="bn-dot"></div></div>
+        <div style="flex:1"></div>
+        <div class="bn-item active" onclick="switchView('projects',3)"><div class="bn-icon">⊙</div><div class="bn-lbl">Projecten</div><div class="bn-dot"></div></div>
+        <div class="bn-item" onclick="switchView('pulse',4)"><div class="bn-icon">⊞</div><div class="bn-lbl">Agenda</div><div class="bn-dot"></div></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         VIEW: AGENDA / PULSE
+    ══════════════════════════════════════ -->
+    <div class="view" id="v-pulse">
+      <div class="nav-hdr">
+        <div>
+          <div class="nav-title">Agenda</div>
+          <div class="nav-sub">vandaag · 8 afspraken</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--indigo)">
+          <div style="width:6px;height:6px;border-radius:50%;background:var(--indigo);animation:lp 2s ease-in-out infinite"></div>
+          Live
+        </div>
+      </div>
+      <div class="scroll" style="padding:8px 16px">
+        <style>
+          .tl-row-m { display:grid; grid-template-columns:46px 1fr; min-height:48px; position:relative; }
+          .tl-row-m::after { content:''; position:absolute; left:46px; right:0; top:0; height:1px; background:var(--border2); }
+          .tl-t-m { font-size:10.5px; font-weight:500; color:var(--text3); padding-top:4px; font-variant-numeric:tabular-nums; }
+          .tl-s-m { position:relative; padding:3px 0; }
+          .ev-m { border-radius:9px; padding:7px 10px; position:absolute; left:0; right:4px; overflow:hidden; cursor:pointer; }
+          .ev-out-m { background:var(--indigo-s); border-left:3px solid var(--indigo); }
+          .ev-blk-m { background:#f0fdf4; border-left:3px solid var(--green); }
+          .ev-t-m { font-size:12.5px; font-weight:600; color:var(--text); }
+          .ev-s-m { font-size:10.5px; color:var(--text2); margin-top:1px; }
+          .now-m { position:absolute; left:46px; right:0; height:1.5px; background:var(--indigo); z-index:2; }
+          .now-m::before { content:''; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:var(--indigo); }
+          @keyframes lp { 0%,100%{box-shadow:0 0 0 2px rgba(79,70,229,.15)} 50%{box-shadow:0 0 0 5px rgba(79,70,229,.05)} }
+        </style>
+        <div style="position:relative">
+          <div class="tl-row-m"><div class="tl-t-m">08:00</div><div class="tl-s-m"></div></div>
+          <div class="tl-row-m"><div class="tl-t-m">09:00</div>
+            <div class="tl-s-m" style="height:52px">
+              <div class="ev-m ev-out-m" style="top:3px;height:42px"><div class="ev-t-m">Team Standup</div><div class="ev-s-m">09:00 – 09:30</div></div>
+            </div>
+          </div>
+          <div class="tl-row-m"><div class="tl-t-m">10:00</div>
+            <div class="tl-s-m" style="height:84px">
+              <div class="ev-m ev-out-m" style="top:3px;height:74px"><div class="ev-t-m">Sync: Brand Systems</div><div class="ev-s-m">Elena & 2 anderen · 10:00 – 11:00</div></div>
+            </div>
+          </div>
+          <div class="tl-row-m"><div class="tl-t-m">11:00</div><div class="tl-s-m"></div></div>
+          <div class="tl-row-m"><div class="tl-t-m">12:00</div><div class="tl-s-m"></div></div>
+          <div style="position:relative;height:1.5px;margin-left:46px;margin-bottom:-1px"><div class="now-m"></div></div>
+          <div class="tl-row-m"><div class="tl-t-m" style="color:var(--indigo);font-weight:700">13:45</div><div class="tl-s-m"></div></div>
+          <div class="tl-row-m"><div class="tl-t-m">14:00</div>
+            <div class="tl-s-m" style="height:84px">
+              <div class="ev-m ev-blk-m" style="top:3px;height:74px"><div class="ev-t-m">⊞ Proposal afmaken</div><div class="ev-s-m">Geblokkeerd · 14:00–15:30</div></div>
+            </div>
+          </div>
+          <div class="tl-row-m"><div class="tl-t-m">16:00</div><div class="tl-s-m"></div></div>
+          <div class="tl-row-m"><div class="tl-t-m">17:00</div><div class="tl-s-m"></div></div>
+          <div class="tl-row-m"><div class="tl-t-m">18:00</div><div class="tl-s-m"></div></div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="bn-item" onclick="switchView('today',0)"><div class="bn-icon">○</div><div class="bn-lbl">Vandaag</div><div class="bn-dot"></div></div>
+        <div class="bn-item" onclick="switchView('week',1)"><div class="bn-icon">☰</div><div class="bn-lbl">Week</div><div class="bn-dot"></div></div>
+        <div style="flex:1"></div>
+        <div class="bn-item" onclick="switchView('projects',3)"><div class="bn-icon">⊙</div><div class="bn-lbl">Projecten</div><div class="bn-dot"></div></div>
+        <div class="bn-item active" onclick="switchView('pulse',4)"><div class="bn-icon">⊞</div><div class="bn-lbl">Agenda</div><div class="bn-dot"></div></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         BOTTOM SHEET (Quick Capture)
+    ══════════════════════════════════════ -->
+    <div class="sheet-backdrop" id="sheet-back" onclick="closeSheet()"></div>
+    <div class="sheet" id="sheet">
+      <div class="sheet-handle"><div class="sheet-handle-bar"></div></div>
+      <div class="sheet-title">Nieuwe taak</div>
+
+      <div class="sheet-input-wrap">
+        <input id="sheet-input" class="sheet-input"
+          placeholder="Wat moet er gebeuren?"
+          onkeyup="parseSheetChips(this.value)"
+          onkeydown="if(event.key==='Escape')closeSheet()"
+          autofocus
+        />
+        <div class="sheet-chips" id="sheetChips"></div>
+      </div>
+
+      <!-- Quick buttons -->
+      <div class="sheet-quick-btns">
+        <div class="qbtn" onclick="appendText(' vandaag')"><span class="qbtn-ic">📅</span> Vandaag</div>
+        <div class="qbtn" onclick="appendText(' morgen')"><span class="qbtn-ic">📅</span> Morgen</div>
+        <div class="qbtn" onclick="appendText(' !!')"><span class="qbtn-ic">⚡</span> Urgent</div>
+        <div class="qbtn" onclick="appendText(' #brand-identity')"><span class="qbtn-ic" style="width:8px;height:8px;border-radius:50%;background:#4f46e5;display:inline-block"></span> #brand</div>
+        <div class="qbtn" onclick="appendText(' @sophie')"><span class="qbtn-ic">@</span> sophie</div>
+      </div>
+
+      <div class="sheet-footer">
+        <div class="sheet-cancel" onclick="closeSheet()">Annuleer</div>
+        <div class="sheet-save" onclick="closeSheet()">Opslaan</div>
+      </div>
+    </div>
+
+  </div><!-- /screen -->
+</div><!-- /phone -->
+
+<script>
+  const views = ['today','week','projects','proj-detail','pulse'];
+
+  function switchView(name, navIdx) {
+    views.forEach(v => {
+      const el = document.getElementById('v-' + v);
+      if (el) { el.classList.remove('on'); }
+    });
+    const target = document.getElementById('v-' + name);
+    if (target) target.classList.add('on');
+  }
+
+  function switchProjTab(tabId, btn) {
+    ['pt-taken','pt-ms','pt-notities'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    document.querySelectorAll('.proj-seg-btn').forEach(b => b.classList.remove('on'));
+    const el = document.getElementById(tabId);
+    if (el) el.style.display = 'block';
+    btn.classList.add('on');
+  }
+
+  function openSheet() {
+    document.getElementById('sheet-back').classList.add('on');
+    document.getElementById('sheet').classList.add('on');
+    setTimeout(() => document.getElementById('sheet-input').focus(), 300);
+  }
+  function closeSheet() {
+    document.getElementById('sheet-back').classList.remove('on');
+    document.getElementById('sheet').classList.remove('on');
+    document.getElementById('sheet-input').value = '';
+    document.getElementById('sheetChips').innerHTML = '';
+  }
+
+  function appendText(txt) {
+    const inp = document.getElementById('sheet-input');
+    inp.value += txt;
+    inp.focus();
+    parseSheetChips(inp.value);
+  }
+
+  function parseSheetChips(val) {
+    const el = document.getElementById('sheetChips');
+    if (!val.trim()) { el.innerHTML = ''; return; }
+    const parts = [];
+    const chip = (txt, bg, cl, bc) =>
+      `<span class="s-chip" style="background:${bg};color:${cl};border-color:${bc}">${txt}</span>`;
+    if (val.includes('!!'))       parts.push(chip('!! Urgent','#fff5f5','#e53e3e','#fecaca'));
+    else if (val.includes('!'))   parts.push(chip('! High','#fffbeb','#d97706','#fde68a'));
+    (val.match(/#\w+/g)||[]).forEach(p => parts.push(chip(p,'#eeeeff','#4f46e5','#c7d0fb')));
+    (val.match(/@\w+/g)||[]).forEach(p => parts.push(chip(p,'#f0fdf4','#16a34a','#bbf7d0')));
+    const dkw = ['vandaag','morgen','maandag','dinsdag','woensdag','donderdag','vrijdag'];
+    if (dkw.some(d => val.toLowerCase().includes(d)) || /\d{1,2}:\d{2}/.test(val))
+      parts.push(chip('📅 Datum','#eff6ff','#2563eb','#bfdbfe'));
+    el.innerHTML = parts.join('');
+  }
+</script>
+</body>
+</html>
