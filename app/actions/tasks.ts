@@ -28,23 +28,23 @@ export async function createTask(rawInput: string) {
     status,
   })
 
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
 }
 
 export async function toggleTask(id: string, currentStatus: string) {
   const newStatus = currentStatus === 'completed' ? 'open' : 'completed'
   await db().from('activities').update({ status: newStatus }).eq('id', id)
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
 }
 
 export async function deleteTask(id: string) {
   await db().from('activities').delete().eq('id', id)
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
 }
 
 export async function moveTaskToToday(id: string) {
   const today = new Date()
   today.setHours(23, 59, 0, 0)
   await db().from('activities').update({ due_date: today.toISOString(), status: 'open' }).eq('id', id)
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
 }

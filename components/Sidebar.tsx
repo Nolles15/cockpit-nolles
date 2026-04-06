@@ -1,6 +1,7 @@
 'use client'
 
-import { LayoutGrid, Calendar, Plus } from 'lucide-react'
+import Link from 'next/link'
+import { LayoutGrid, Calendar, Plus, ArrowUpRight } from 'lucide-react'
 import { Tag } from '@/lib/supabase'
 
 interface Props {
@@ -48,18 +49,27 @@ export default function Sidebar({ tags, activeView, activeProject, onViewChange,
           </button>
         </div>
         {projects.map(p => (
-          <button
-            key={p.id}
-            onClick={() => onProjectClick(p.name)}
-            className={`w-full flex items-center gap-[9px] px-4 py-[7px] text-[13.5px] font-medium transition-colors text-left
-              ${activeProject === p.name
-                ? 'text-[#4f46e5] bg-[#eeeeff] font-semibold relative before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2.5px] before:bg-[#4f46e5] before:rounded-r'
-                : 'text-[#6b7080] hover:bg-[#eeeeff] hover:text-[#4f46e5]'
-              }`}
-          >
-            <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: p.color }} />
-            <span className="flex-1 truncate">{p.name}</span>
-          </button>
+          <div key={p.id}>
+            <button
+              onClick={() => onProjectClick(p.name)}
+              className={`w-full flex items-center gap-[9px] px-4 py-[7px] text-[13.5px] font-medium transition-colors text-left
+                ${activeProject === p.name
+                  ? 'text-[#4f46e5] bg-[#eeeeff] font-semibold relative before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2.5px] before:bg-[#4f46e5] before:rounded-r'
+                  : 'text-[#6b7080] hover:bg-[#eeeeff] hover:text-[#4f46e5]'
+                }`}
+            >
+              <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: p.color }} />
+              <span className="flex-1 truncate">{p.name}</span>
+            </button>
+            {activeProject === p.name && (
+              <Link
+                href={`/projects/${encodeURIComponent(p.name)}`}
+                className="flex items-center gap-[5px] ml-[28px] mr-4 mb-[3px] text-[11.5px] text-[#4f46e5] opacity-60 hover:opacity-100 transition-opacity"
+              >
+                <ArrowUpRight size={11} /> Open projectpagina
+              </Link>
+            )}
+          </div>
         ))}
       </div>
 

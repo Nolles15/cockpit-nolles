@@ -65,3 +65,13 @@ export interface ProjectNote {
   content:     string
   updated_at:  string
 }
+
+export interface Project {
+  id:          string
+  tag_name:    string
+  description: string | null
+  status:      'active' | 'on-hold' | 'completed'
+  metadata:    Record<string, unknown>
+  created_at:  string
+  updated_at:  string
+}
