@@ -1,8 +1,20 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import DashboardShell from '@/components/DashboardShell'
 
-export default async function Home() {
-  const { data: tags } = await supabase.from('tags').select('*').order('name')
+export const dynamic = 'force-dynamic'
 
-  return <DashboardShell tags={tags ?? []} />
+function db() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+
+export default async function Home() {
+  const [{ data: tags }, { data: activities }] = await Promise.all([
+    db().from('tags').select('*').order('name'),
+    db().from('activities').select('*').order('position').order('created_at'),
+  ])
+
+  return <DashboardShell tags={tags ?? []} activities={activities ?? []} />
 }
