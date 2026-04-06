@@ -6,6 +6,7 @@ import { nl } from 'date-fns/locale'
 import { Activity, Tag } from '@/lib/supabase'
 import QuickCapture from './QuickCapture'
 import TaskRow from './TaskRow'
+import ProjectView from './ProjectView'
 import { createTask } from '@/app/actions/tasks'
 import { Plus } from 'lucide-react'
 
@@ -19,9 +20,21 @@ interface Props {
 export default function FocusZone({ activities, tags, activeProject, captureRef }: Props) {
   const tagColors = Object.fromEntries(tags.map(t => [t.name, t.color]))
 
-  const base = activeProject
-    ? activities.filter(a => a.project_tags.includes(activeProject))
-    : activities
+  // Project actief → inline project view
+  if (activeProject) {
+    const tag = tags.find(t => t.name === activeProject)
+    const filtered = activities.filter(a => a.project_tags.includes(activeProject))
+    return (
+      <ProjectView
+        tag={activeProject}
+        tagColor={tag?.color ?? '#4f46e5'}
+        activities={filtered}
+        captureRef={captureRef}
+      />
+    )
+  }
+
+  const base = activities
 
   const open      = base.filter(a => a.status === 'open' || a.status === 'horizon')
   const completed = base.filter(a => a.status === 'completed').slice(0, 5)
