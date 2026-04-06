@@ -62,6 +62,7 @@ export interface Milestone {
 export interface ProjectNote {
   id:          string
   project_tag: string
+  title:       string | null
   content:     string
   updated_at:  string
 }

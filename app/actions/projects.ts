@@ -37,8 +37,8 @@ export async function deleteMilestone(id: string, projectTag: string) {
   revalidate(projectTag)
 }
 
-export async function addNote(projectTag: string, content: string) {
-  await db().from('project_notes').insert({ project_tag: projectTag, content })
+export async function addNote(projectTag: string, content: string, title?: string) {
+  await db().from('project_notes').insert({ project_tag: projectTag, content, title: title || null })
   revalidate(projectTag)
 }
 

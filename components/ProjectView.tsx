@@ -251,13 +251,15 @@ function NotitiesTab({ notes, tag, onMutate }: {
   onMutate: () => void
 }) {
   const [adding, setAdding]        = useState(false)
+  const [title, setTitle]          = useState('')
   const [content, setContent]      = useState('')
   const [pending, startTransition] = useTransition()
 
   function submit() {
     if (!content.trim()) return
     startTransition(async () => {
-      await addNote(tag, content.trim())
+      await addNote(tag, content.trim(), title.trim() || undefined)
+      setTitle('')
       setContent('')
       setAdding(false)
       onMutate()
@@ -271,43 +273,34 @@ function NotitiesTab({ notes, tag, onMutate }: {
       )}
 
       <div className="space-y-3">
-        {notes.map(n => (
-          <div key={n.id} className="bg-white rounded-[12px] border border-[#e8e9f2] p-4">
-            <p className="text-[14px] text-[#0f1117] leading-[1.6] whitespace-pre-wrap">{n.content}</p>
-            <div className="flex items-center justify-between mt-3">
-              <span className="text-[11.5px] text-[#b0b5c8]">
-                {new Date(n.updated_at).toLocaleDateString('nl-NL', {
-                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                })}
-              </span>
-              <button
-                onClick={() => startTransition(async () => { await deleteNote(n.id, tag); onMutate() })}
-                className="text-[12px] text-[#b0b5c8] hover:text-[#e53e3e] transition-colors cursor-pointer"
-              >
-                Verwijder
-              </button>
-            </div>
-          </div>
-        ))}
+        {notes.map(n => <NoteCard key={n.id} note={n} tag={tag} onMutate={onMutate} />)}
       </div>
 
       {adding ? (
-        <div className="mt-4">
-          <textarea
+        <div className="mt-4 bg-white border border-[#a5b4fc] rounded-[12px] p-4 shadow-[0_0_0_3px_rgba(79,70,229,.08)]">
+          <input
             autoFocus
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            disabled={pending}
+            className="w-full text-[14px] font-semibold text-[#0f1117] outline-none mb-2 placeholder:text-[#b0b5c8] placeholder:font-normal"
+            placeholder="Titel (optioneel)"
+          />
+          <textarea
             value={content}
             onChange={e => setContent(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') { setAdding(false); setTitle(''); setContent('') } }}
             disabled={pending}
-            className="w-full border border-[#e8e9f2] focus:border-[#a5b4fc] rounded-[12px] px-4 py-3 text-[14px] outline-none resize-none h-[120px] bg-white"
+            className="w-full border-t border-[#f0f1f8] pt-2 text-[13.5px] text-[#0f1117] leading-[1.6] outline-none resize-none h-[100px] bg-transparent placeholder:text-[#b0b5c8]"
             placeholder="Notitie…"
           />
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-3">
             <button onClick={submit} disabled={pending}
-              className="bg-[#4f46e5] text-white rounded-[10px] px-4 py-[9px] text-[13px] font-semibold cursor-pointer">
+              className="bg-[#4f46e5] text-white rounded-[10px] px-4 py-[8px] text-[13px] font-semibold cursor-pointer">
               Opslaan
             </button>
-            <button onClick={() => { setAdding(false); setContent('') }}
-              className="text-[#b0b5c8] px-3 py-[9px] text-[13px] cursor-pointer">
+            <button onClick={() => { setAdding(false); setTitle(''); setContent('') }}
+              className="text-[#b0b5c8] px-3 py-[8px] text-[13px] cursor-pointer">
               Annuleer
             </button>
           </div>
@@ -318,6 +311,45 @@ function NotitiesTab({ notes, tag, onMutate }: {
           <Plus size={14} /> Notitie toevoegen
         </button>
       )}
+    </div>
+  )
+}
+
+function NoteCard({ note, tag, onMutate }: { note: ProjectNote; tag: string; onMutate: () => void }) {
+  const isLong = note.content.length > 220 || note.content.split('\n').length > 4
+  const [expanded, setExpanded]    = useState(false)
+  const [pending, startTransition] = useTransition()
+
+  return (
+    <div className="bg-white rounded-[12px] border border-[#e8e9f2] p-4">
+      {note.title && (
+        <p className="text-[13.5px] font-semibold text-[#0f1117] mb-1">{note.title}</p>
+      )}
+      <p className={`text-[13.5px] text-[#3d404a] leading-[1.6] whitespace-pre-wrap
+        ${isLong && !expanded ? 'line-clamp-4' : ''}`}>
+        {note.content}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(p => !p)}
+          className="mt-1 text-[12px] text-[#4f46e5] hover:underline cursor-pointer"
+        >
+          {expanded ? 'Toon minder ▴' : 'Toon meer ▾'}
+        </button>
+      )}
+      <div className="flex items-center justify-between mt-3">
+        <span className="text-[11.5px] text-[#b0b5c8]">
+          {new Date(note.updated_at).toLocaleDateString('nl-NL', {
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+          })}
+        </span>
+        <button
+          onClick={() => startTransition(async () => { await deleteNote(note.id, tag); onMutate() })}
+          className="text-[12px] text-[#b0b5c8] hover:text-[#e53e3e] transition-colors cursor-pointer"
+        >
+          Verwijder
+        </button>
+      </div>
     </div>
   )
 }
