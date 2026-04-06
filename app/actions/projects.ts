@@ -38,7 +38,9 @@ export async function deleteMilestone(id: string, projectTag: string) {
 }
 
 export async function addNote(projectTag: string, content: string, title?: string) {
-  await db().from('project_notes').insert({ project_tag: projectTag, content, title: title || null })
+  // Titel wordt als eerste regel opgeslagen, gescheiden door \n\n
+  const stored = title ? `${title}\n\n${content}` : content
+  await db().from('project_notes').insert({ project_tag: projectTag, content: stored })
   revalidate(projectTag)
 }
 

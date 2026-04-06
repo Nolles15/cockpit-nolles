@@ -315,19 +315,29 @@ function NotitiesTab({ notes, tag, onMutate }: {
   )
 }
 
+// Parst "Titel\n\nBody" uit het content veld
+function parseNote(raw: string): { title: string | null; body: string } {
+  const idx = raw.indexOf('\n\n')
+  if (idx === -1 || idx > 80) return { title: null, body: raw }
+  const first = raw.slice(0, idx)
+  if (first.includes('\n')) return { title: null, body: raw }
+  return { title: first, body: raw.slice(idx + 2) }
+}
+
 function NoteCard({ note, tag, onMutate }: { note: ProjectNote; tag: string; onMutate: () => void }) {
-  const isLong = note.content.length > 220 || note.content.split('\n').length > 4
+  const { title, body }            = parseNote(note.content)
+  const isLong = body.length > 220 || body.split('\n').length > 4
   const [expanded, setExpanded]    = useState(false)
   const [pending, startTransition] = useTransition()
 
   return (
     <div className="bg-white rounded-[12px] border border-[#e8e9f2] p-4">
-      {note.title && (
-        <p className="text-[13.5px] font-semibold text-[#0f1117] mb-1">{note.title}</p>
+      {title && (
+        <p className="text-[13.5px] font-semibold text-[#0f1117] mb-1">{title}</p>
       )}
       <p className={`text-[13.5px] text-[#3d404a] leading-[1.6] whitespace-pre-wrap
         ${isLong && !expanded ? 'line-clamp-4' : ''}`}>
-        {note.content}
+        {body}
       </p>
       {isLong && (
         <button

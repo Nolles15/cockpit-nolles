@@ -62,8 +62,7 @@ export interface Milestone {
 export interface ProjectNote {
   id:          string
   project_tag: string
-  title:       string | null
-  content:     string
+  content:     string   // optioneel: eerste regel = titel als gescheiden door \n\n
   updated_at:  string
 }
 
