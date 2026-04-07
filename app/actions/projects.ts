@@ -15,6 +15,25 @@ function revalidate(tag: string) {
   revalidatePath(`/projects/${encodeURIComponent(tag)}`)
 }
 
+// Kleuren voor nieuwe tags (cyclisch)
+const TAG_COLORS = ['#4f46e5','#f59e0b','#22c55e','#3b82f6','#a78bfa','#ec4899','#f97316','#14b8a6']
+
+export async function createTag(name: string, type: 'project' | 'person') {
+  const slug = name.trim().toLowerCase().replace(/\s+/g, '-')
+  if (!slug) return
+  // Pak een willekeurige kleur die nog niet in gebruik is
+  const { data: existing } = await db().from('tags').select('color')
+  const usedColors = new Set((existing ?? []).map((t: { color: string }) => t.color))
+  const color = TAG_COLORS.find(c => !usedColors.has(c)) ?? TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)]
+  await db().from('tags').insert({ name: slug, tag_type: type, color })
+  revalidatePath('/', 'layout')
+}
+
+export async function deleteTag(name: string) {
+  await db().from('tags').delete().eq('name', name)
+  revalidatePath('/', 'layout')
+}
+
 export async function addMilestone(projectTag: string, name: string) {
   const { data: last } = await db()
     .from('milestones')

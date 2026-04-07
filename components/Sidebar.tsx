@@ -1,7 +1,9 @@
 'use client'
 
-import { LayoutGrid, Calendar, Plus } from 'lucide-react'
+import { useRef, useState, useTransition } from 'react'
+import { LayoutGrid, Calendar, Plus, X } from 'lucide-react'
 import { Tag } from '@/lib/supabase'
+import { createTag, deleteTag } from '@/app/actions/projects'
 
 interface Props {
   tags: Tag[]
@@ -42,62 +44,47 @@ export default function Sidebar({ tags, activeView, activeProject, activePerson,
       </div>
 
       {/* Projecten */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between text-[9.5px] font-bold tracking-[.1em] uppercase text-[#b0b5c8] px-4 pb-[5px]">
-          Projecten
-          <button className="opacity-45 hover:opacity-100 hover:text-[#4f46e5] transition-opacity cursor-pointer">
-            <Plus size={14} />
-          </button>
-        </div>
+      <TagSection
+        label="Projecten"
+        type="project"
+        onAdded={() => {}}
+      >
         {projects.map(p => (
-          <button
+          <TagItem
             key={p.id}
+            isActive={activeProject === p.name}
             onClick={() => onProjectClick(p.name)}
-            className={`w-full flex items-center gap-[9px] px-4 py-[7px] text-[13.5px] font-medium transition-colors text-left
-              ${activeProject === p.name
-                ? 'text-[#4f46e5] bg-[#eeeeff] font-semibold relative before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2.5px] before:bg-[#4f46e5] before:rounded-r'
-                : 'text-[#6b7080] hover:bg-[#eeeeff] hover:text-[#4f46e5]'
-              }`}
-          >
-            <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: p.color }} />
-            <span className="flex-1 truncate">{p.name}</span>
-          </button>
+            onDelete={() => deleteTag(p.name)}
+            left={<span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: p.color }} />}
+            label={p.name}
+          />
         ))}
-      </div>
+      </TagSection>
 
       {/* Mensen */}
-      {people.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between text-[9.5px] font-bold tracking-[.1em] uppercase text-[#b0b5c8] px-4 pb-[5px]">
-            Mensen
-            <button className="opacity-45 hover:opacity-100 hover:text-[#4f46e5] transition-opacity cursor-pointer">
-              <Plus size={14} />
-            </button>
-          </div>
-          {people.map(p => {
-            const isActive = activePerson === p.name
-            return (
-              <button
-                key={p.id}
-                onClick={() => onPersonClick(p.name)}
-                className={`w-full flex items-center gap-[9px] px-4 py-[6px] text-[13px] font-medium transition-colors text-left relative
-                  ${isActive
-                    ? 'text-[#4f46e5] bg-[#eeeeff] font-semibold before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2.5px] before:bg-[#4f46e5] before:rounded-r'
-                    : 'text-[#6b7080] hover:bg-[#eeeeff] hover:text-[#4f46e5]'
-                  }`}
+      <TagSection
+        label="Mensen"
+        type="person"
+        onAdded={() => {}}
+      >
+        {people.map(p => (
+          <TagItem
+            key={p.id}
+            isActive={activePerson === p.name}
+            onClick={() => onPersonClick(p.name)}
+            onDelete={() => deleteTag(p.name)}
+            left={
+              <span
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                style={{ background: p.color + '33', color: p.color }}
               >
-                <span
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                  style={{ background: p.color + '33', color: p.color }}
-                >
-                  {initials(p.name)}
-                </span>
-                <span className="flex-1 truncate capitalize">{p.name}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
+                {initials(p.name)}
+              </span>
+            }
+            label={p.name}
+          />
+        ))}
+      </TagSection>
 
       <div className="flex-1" />
 
@@ -111,6 +98,100 @@ export default function Sidebar({ tags, activeView, activeProject, activePerson,
         </button>
       </div>
     </aside>
+  )
+}
+
+// ── TagSection ────────────────────────────────────────────────
+function TagSection({ label, type, children, onAdded }: {
+  label: string
+  type: 'project' | 'person'
+  children: React.ReactNode
+  onAdded: () => void
+}) {
+  const [adding, setAdding]       = useState(false)
+  const [value, setValue]         = useState('')
+  const [isPending, startTrans]   = useTransition()
+  const inputRef                  = useRef<HTMLInputElement>(null)
+
+  function handleAdd() {
+    if (!value.trim()) { setAdding(false); return }
+    startTrans(async () => {
+      await createTag(value.trim(), type)
+      setValue('')
+      setAdding(false)
+      onAdded()
+    })
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between text-[9.5px] font-bold tracking-[.1em] uppercase text-[#b0b5c8] px-4 pb-[5px]">
+        {label}
+        <button
+          onClick={() => { setAdding(true); setTimeout(() => inputRef.current?.focus(), 50) }}
+          className="opacity-45 hover:opacity-100 hover:text-[#4f46e5] transition-opacity cursor-pointer"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+
+      {children}
+
+      {/* Inline add */}
+      {adding && (
+        <div className="flex items-center gap-2 px-4 py-[6px]">
+          <input
+            ref={inputRef}
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            disabled={isPending}
+            placeholder={type === 'project' ? 'Projectnaam…' : 'Naam…'}
+            className="flex-1 min-w-0 bg-[#f5f6fb] border border-[#e8e9f2] rounded-[7px] px-2 py-1 text-[12.5px] outline-none focus:border-[#4f46e5]"
+            onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAdding(false); setValue('') } }}
+            onBlur={() => { if (!value.trim()) setAdding(false) }}
+          />
+          <button
+            onClick={handleAdd}
+            disabled={isPending}
+            className="text-[#4f46e5] text-[11px] font-semibold shrink-0 disabled:opacity-40"
+          >
+            {isPending ? '…' : 'OK'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── TagItem ───────────────────────────────────────────────────
+function TagItem({ isActive, onClick, onDelete, left, label }: {
+  isActive: boolean
+  onClick: () => void
+  onDelete: () => void
+  left: React.ReactNode
+  label: string
+}) {
+  const [isPending, startTrans] = useTransition()
+
+  return (
+    <div className={`group relative flex items-center gap-[9px] px-4 py-[7px] text-[13.5px] font-medium transition-colors cursor-pointer
+      ${isActive
+        ? 'text-[#4f46e5] bg-[#eeeeff] font-semibold before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2.5px] before:bg-[#4f46e5] before:rounded-r'
+        : 'text-[#6b7080] hover:bg-[#eeeeff] hover:text-[#4f46e5]'
+      }`}
+      onClick={onClick}
+    >
+      {left}
+      <span className="flex-1 truncate capitalize">{label}</span>
+      <button
+        onClick={e => { e.stopPropagation(); startTrans(() => onDelete()) }}
+        disabled={isPending}
+        className="opacity-0 group-hover:opacity-100 text-[#b0b5c8] hover:text-[#e53e3e] transition-all shrink-0 disabled:opacity-40"
+        title="Verwijder"
+      >
+        <X size={13} />
+      </button>
+    </div>
   )
 }
 
