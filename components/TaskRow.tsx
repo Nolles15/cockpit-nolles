@@ -1,8 +1,8 @@
 'use client'
 
-import { useTransition } from 'react'
-import { CalendarPlus, Pencil, Trash2, ArrowRight } from 'lucide-react'
-import { toggleTask, deleteTask, moveTaskToToday } from '@/app/actions/tasks'
+import { useRef, useState, useTransition } from 'react'
+import { CalendarPlus, Pencil, Trash2, ArrowRight, Check, X } from 'lucide-react'
+import { toggleTask, deleteTask, moveTaskToToday, updateTask } from '@/app/actions/tasks'
 import { Activity } from '@/lib/supabase'
 import { format, isToday, isTomorrow, isThisYear } from 'date-fns'
 import { nl } from 'date-fns/locale'
@@ -22,6 +22,9 @@ interface Props {
 
 export default function TaskRow({ task, isOverdue, tags }: Props) {
   const [pending, startTransition] = useTransition()
+  const [editing, setEditing]      = useState(false)
+  const [editVal, setEditVal]      = useState('')
+  const inputRef                   = useRef<HTMLInputElement>(null)
   const done = task.status === 'completed'
 
   function formatDue(iso: string) {
@@ -33,6 +36,68 @@ export default function TaskRow({ task, isOverdue, tags }: Props) {
     return format(d, 'd MMM yyyy', { locale: nl })
   }
 
+  function startEdit() {
+    // Herstel de originele invoer: content + tags + datum
+    const parts: string[] = [task.content]
+    task.project_tags.forEach(t => parts.push(`#${t}`))
+    task.person_tags.forEach(t => parts.push(`@${t}`))
+    if (task.priority === 'urgent') parts.push('!!')
+    else if (task.priority === 'high') parts.push('!')
+    if (task.due_date) {
+      const d = new Date(task.due_date)
+      parts.push(format(d, 'EEEE', { locale: nl }))
+    }
+    setEditVal(parts.join(' '))
+    setEditing(true)
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select() }, 30)
+  }
+
+  function submitEdit() {
+    if (!editVal.trim()) { setEditing(false); return }
+    startTransition(async () => {
+      await updateTask(task.id, editVal)
+      setEditing(false)
+    })
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+    setEditVal('')
+  }
+
+  // ── Edit mode ───────────────────────────────────────────────
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2 py-[10px] px-2 border-b border-[#e8e9f2] bg-[#fafbff]">
+        <span className="w-[3px] self-stretch rounded-[3px] shrink-0 bg-[#4f46e5]" />
+        <input
+          ref={inputRef}
+          value={editVal}
+          onChange={e => setEditVal(e.target.value)}
+          disabled={pending}
+          className="flex-1 min-w-0 bg-white border border-[#a5b4fc] rounded-[8px] px-3 py-[7px] text-[13.5px] outline-none caret-[#4f46e5]"
+          onKeyDown={e => { if (e.key === 'Enter') submitEdit(); if (e.key === 'Escape') cancelEdit() }}
+        />
+        <button
+          onClick={submitEdit}
+          disabled={pending}
+          className="w-[28px] h-[28px] rounded-[7px] flex items-center justify-center bg-[#4f46e5] text-white hover:brightness-110 disabled:opacity-40 shrink-0"
+          title="Opslaan"
+        >
+          {pending ? <span className="text-[11px]">…</span> : <Check size={13} />}
+        </button>
+        <button
+          onClick={cancelEdit}
+          className="w-[28px] h-[28px] rounded-[7px] flex items-center justify-center text-[#b0b5c8] hover:bg-[#f5f6fb] shrink-0"
+          title="Annuleer"
+        >
+          <X size={13} />
+        </button>
+      </div>
+    )
+  }
+
+  // ── Normale weergave ────────────────────────────────────────
   return (
     <div className={`group flex items-center gap-3 py-[14px] px-2 border-b border-[#f0f1f8] last:border-none relative transition-colors
       ${isOverdue ? 'bg-[#fff5f5] rounded-[10px] border-none mb-[2px] px-[10px]' : ''}
@@ -97,8 +162,9 @@ export default function TaskRow({ task, isOverdue, tags }: Props) {
               <ArrowRight size={13} />
             </ActionBtn>
           )}
-          <ActionBtn title="Plan in agenda"><CalendarPlus size={13} /></ActionBtn>
-          <ActionBtn title="Bewerk"><Pencil size={13} /></ActionBtn>
+          <ActionBtn title="Bewerk" onClick={startEdit}>
+            <Pencil size={13} />
+          </ActionBtn>
           <ActionBtn title="Verwijder" onClick={() => startTransition(() => deleteTask(task.id))}>
             <Trash2 size={13} />
           </ActionBtn>

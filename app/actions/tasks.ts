@@ -49,6 +49,21 @@ export async function moveTaskToToday(id: string) {
   revalidatePath('/', 'layout')
 }
 
+export async function updateTask(id: string, rawInput: string) {
+  const parsed = parseInput(rawInput)
+  if (!parsed.content) return
+  const status = resolveStatus(parsed.due_date)
+  await db().from('activities').update({
+    content:      parsed.content,
+    due_date:     parsed.due_date?.toISOString() ?? null,
+    project_tags: parsed.project_tags,
+    person_tags:  parsed.person_tags,
+    priority:     parsed.priority,
+    status,
+  }).eq('id', id)
+  revalidatePath('/', 'layout')
+}
+
 export async function rescheduleTask(id: string, due_date: string | null) {
   await db().from('activities').update({ due_date, status: 'open' }).eq('id', id)
   revalidatePath('/', 'layout')
