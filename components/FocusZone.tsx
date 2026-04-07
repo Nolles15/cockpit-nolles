@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useRef, useState, useTransition, useEffect } from 'react'
 import { startOfDay, endOfDay, addDays, format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import {
@@ -10,7 +10,7 @@ import {
 import {
   SortableContext, arrayMove, verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { Activity, Tag } from '@/lib/supabase'
+import { Activity, Tag, supabase } from '@/lib/supabase'
 import QuickCapture from './QuickCapture'
 import TaskRow from './TaskRow'
 import SortableTaskRow from './SortableTaskRow'
@@ -22,21 +22,39 @@ interface Props {
   activities: Activity[]
   tags: Tag[]
   activeProject: string | null
+  activePerson: string | null
   captureRef: React.RefObject<HTMLInputElement | null>
 }
 
 type SectionKey = 'overdue' | 'today' | 'tomorrow' | 'thisweek' | 'later' | 'completed'
 
-export default function FocusZone({ activities, tags, activeProject, captureRef }: Props) {
+export default function FocusZone({ activities, tags, activeProject, activePerson, captureRef }: Props) {
   const tagColors = Object.fromEntries(tags.map(t => [t.name, t.color]))
   const [localActivities, setLocalActivities] = useState(activities)
   const [activeId, setActiveId] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
-  // Sync prop changes (na server revalidate)
-  if (activities !== localActivities && !activeId) {
-    setLocalActivities(activities)
-  }
+  // Sync server props (na revalidatePath)
+  useEffect(() => {
+    if (!activeId) setLocalActivities(activities)
+  }, [activities])
+
+  // Realtime subscription — instant UI updates zonder te wachten op revalidatePath
+  useEffect(() => {
+    const channel = supabase
+      .channel('focuszone-activities')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activities' }, ({ new: row }) => {
+        setLocalActivities(prev => prev.find(a => a.id === row.id) ? prev : [...prev, row as Activity])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'activities' }, ({ new: row }) => {
+        setLocalActivities(prev => prev.map(a => a.id === row.id ? row as Activity : a))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'activities' }, ({ old: row }) => {
+        setLocalActivities(prev => prev.filter(a => a.id !== row.id))
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   // Project actief → inline project view
   if (activeProject) {
@@ -48,6 +66,20 @@ export default function FocusZone({ activities, tags, activeProject, captureRef 
         tagColor={tag?.color ?? '#4f46e5'}
         activities={filtered}
         captureRef={captureRef}
+      />
+    )
+  }
+
+  // Persoon actief → gefilterde takenlijst
+  if (activePerson) {
+    const person = tags.find(t => t.name === activePerson)
+    const filtered = localActivities.filter(a => a.person_tags.includes(activePerson))
+    return (
+      <PersonView
+        name={activePerson}
+        color={person?.color ?? '#4f46e5'}
+        activities={filtered}
+        tagColors={tagColors}
       />
     )
   }
@@ -221,6 +253,61 @@ function Section({ title, titleColor, sub, count, children }: {
       </div>
       {children}
     </div>
+  )
+}
+
+function PersonView({ name, color, activities, tagColors }: {
+  name: string
+  color: string
+  activities: Activity[]
+  tagColors: Record<string, string>
+}) {
+  const open      = activities.filter(a => a.status === 'open' || a.status === 'horizon')
+  const completed = activities.filter(a => a.status === 'completed').slice(0, 5)
+
+  function initials(n: string) {
+    return n.split(/[\s-]/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  }
+
+  return (
+    <main className="flex-1 overflow-y-auto bg-[#f5f6fb] min-w-0">
+      {/* Header */}
+      <div className="px-[30px] pt-[28px] pb-[20px] flex items-center gap-4 border-b border-[#e8e9f2] bg-white">
+        <span
+          className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
+          style={{ background: color + '33', color }}
+        >
+          {initials(name)}
+        </span>
+        <div>
+          <h1 className="text-[18px] font-bold capitalize">{name}</h1>
+          <p className="text-[12px] text-[#b0b5c8]">{open.length} open taken</p>
+        </div>
+      </div>
+
+      <div className="px-[30px] pb-10">
+        {open.length > 0 ? (
+          <div className="pt-[22px]">
+            <div className="flex items-baseline gap-[9px] pb-3 border-b border-[#e8e9f2]">
+              <span className="text-[16px] font-bold tracking-[-0.2px]">Open taken</span>
+            </div>
+            {open.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)}
+          </div>
+        ) : (
+          <p className="text-center text-[#b0b5c8] text-[13px] pt-16">
+            Geen open taken voor @{name}
+          </p>
+        )}
+        {completed.length > 0 && (
+          <div className="pt-[22px]">
+            <div className="flex items-baseline gap-[9px] pb-3 border-b border-[#e8e9f2]">
+              <span className="text-[16px] font-bold tracking-[-0.2px]">Gedaan</span>
+            </div>
+            {completed.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)}
+          </div>
+        )}
+      </div>
+    </main>
   )
 }
 

@@ -58,9 +58,14 @@ export default function MobileShell({ tags, activities }: Props) {
 
   const tagColors  = Object.fromEntries(tags.map(t => [t.name, t.color]))
   const projects   = tags.filter(t => t.tag_type === 'project')
+  const people     = tags.filter(t => t.tag_type === 'person')
+
+  function initials(name: string) {
+    return name.split(/[\s-]/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  }
 
   const headerTitle = activeProject && activeTab === 'projecten'
-    ? activeProject
+    ? (activeProject.startsWith('@') ? activeProject.slice(1) : activeProject)
     : activeTab === 'taken' ? 'Taken'
     : activeTab === 'projecten' ? 'Projecten'
     : 'Pulse'
@@ -117,9 +122,12 @@ export default function MobileShell({ tags, activities }: Props) {
           </div>
         )}
 
-        {/* ── Projecten lijst ──────────────────────────────── */}
+        {/* ── Projecten + Mensen lijst ─────────────────────── */}
         {activeTab === 'projecten' && !activeProject && (
           <div className="px-4 py-3 space-y-2 pb-24">
+            {projects.length > 0 && (
+              <p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#b0b5c8] px-1 pt-1">Projecten</p>
+            )}
             {projects.map(p => {
               const count = open.filter(a => a.project_tags.includes(p.name)).length
               return (
@@ -136,18 +144,46 @@ export default function MobileShell({ tags, activities }: Props) {
                 </button>
               )
             })}
+            {people.length > 0 && (
+              <p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#b0b5c8] px-1 pt-3">Mensen</p>
+            )}
+            {people.map(p => {
+              const count = open.filter(a => a.person_tags.includes(p.name)).length
+              return (
+                <button
+                  key={p.name}
+                  onClick={() => setActiveProject(`@${p.name}`)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-[12px] bg-white border border-[#e8e9f2] text-left active:bg-[#f5f6fb]"
+                >
+                  <span
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                    style={{ background: p.color + '33', color: p.color }}
+                  >
+                    {initials(p.name)}
+                  </span>
+                  <span className="text-[14px] font-medium flex-1 capitalize">{p.name}</span>
+                  {count > 0 && (
+                    <span className="text-[12px] text-[#b0b5c8] bg-[#f5f6fb] rounded-full px-2 py-0.5">{count}</span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         )}
 
-        {/* ── Project detail ──────────────────────────────── */}
+        {/* ── Project / persoon detail ─────────────────────── */}
         {activeTab === 'projecten' && activeProject && (
           <div className="px-4 py-3 space-y-1 pb-24">
-            {open.filter(a => a.project_tags.includes(activeProject)).map(t => (
-              <TaskRow key={t.id} task={t} tags={tagColors} />
-            ))}
-            {open.filter(a => a.project_tags.includes(activeProject)).length === 0 && (
-              <p className="text-[13px] text-[#c0c4d4] py-4 text-center">Geen open taken</p>
-            )}
+            {(() => {
+              const isPerson = activeProject.startsWith('@')
+              const key = isPerson ? activeProject.slice(1) : activeProject
+              const filtered = isPerson
+                ? open.filter(a => a.person_tags.includes(key))
+                : open.filter(a => a.project_tags.includes(key))
+              return filtered.length > 0
+                ? filtered.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)
+                : <p className="text-[13px] text-[#c0c4d4] py-4 text-center">Geen open taken</p>
+            })()}
           </div>
         )}
 

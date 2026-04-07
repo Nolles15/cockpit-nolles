@@ -7,12 +7,14 @@ interface Props {
   tags: Tag[]
   activeView: string
   activeProject: string | null
+  activePerson: string | null
   onViewChange: (view: string) => void
   onProjectClick: (tagName: string) => void
+  onPersonClick: (name: string) => void
   onNewTask: () => void
 }
 
-export default function Sidebar({ tags, activeView, activeProject, onViewChange, onProjectClick, onNewTask }: Props) {
+export default function Sidebar({ tags, activeView, activeProject, activePerson, onViewChange, onProjectClick, onPersonClick, onNewTask }: Props) {
   const projects = tags.filter(t => t.tag_type === 'project')
   const people   = tags.filter(t => t.tag_type === 'person')
 
@@ -28,7 +30,7 @@ export default function Sidebar({ tags, activeView, activeProject, onViewChange,
         <NavItem
           icon={<LayoutGrid size={14} />}
           label="Overzicht"
-          active={activeView === 'main' && !activeProject}
+          active={activeView === 'main' && !activeProject && !activePerson}
           onClick={() => onViewChange('main')}
         />
         <NavItem
@@ -64,25 +66,38 @@ export default function Sidebar({ tags, activeView, activeProject, onViewChange,
       </div>
 
       {/* Mensen */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between text-[9.5px] font-bold tracking-[.1em] uppercase text-[#b0b5c8] px-4 pb-[5px]">
-          Mensen
-          <button className="opacity-45 hover:opacity-100 hover:text-[#4f46e5] transition-opacity cursor-pointer">
-            <Plus size={14} />
-          </button>
-        </div>
-        {people.map(p => (
-          <div key={p.id} className="flex items-center gap-[9px] px-4 py-[5px] text-[13px] font-medium text-[#6b7080] hover:text-[#0f1117] cursor-pointer">
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-              style={{ background: p.color + '33', color: p.color }}
-            >
-              {initials(p.name)}
-            </span>
-            {p.name}
+      {people.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-[9.5px] font-bold tracking-[.1em] uppercase text-[#b0b5c8] px-4 pb-[5px]">
+            Mensen
+            <button className="opacity-45 hover:opacity-100 hover:text-[#4f46e5] transition-opacity cursor-pointer">
+              <Plus size={14} />
+            </button>
           </div>
-        ))}
-      </div>
+          {people.map(p => {
+            const isActive = activePerson === p.name
+            return (
+              <button
+                key={p.id}
+                onClick={() => onPersonClick(p.name)}
+                className={`w-full flex items-center gap-[9px] px-4 py-[6px] text-[13px] font-medium transition-colors text-left relative
+                  ${isActive
+                    ? 'text-[#4f46e5] bg-[#eeeeff] font-semibold before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2.5px] before:bg-[#4f46e5] before:rounded-r'
+                    : 'text-[#6b7080] hover:bg-[#eeeeff] hover:text-[#4f46e5]'
+                  }`}
+              >
+                <span
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                  style={{ background: p.color + '33', color: p.color }}
+                >
+                  {initials(p.name)}
+                </span>
+                <span className="flex-1 truncate capitalize">{p.name}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       <div className="flex-1" />
 
