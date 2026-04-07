@@ -48,3 +48,17 @@ export async function moveTaskToToday(id: string) {
   await db().from('activities').update({ due_date: today.toISOString(), status: 'open' }).eq('id', id)
   revalidatePath('/', 'layout')
 }
+
+export async function rescheduleTask(id: string, due_date: string | null) {
+  await db().from('activities').update({ due_date, status: 'open' }).eq('id', id)
+  revalidatePath('/', 'layout')
+}
+
+export async function reorderTasks(updates: { id: string; position: number }[]) {
+  await Promise.all(
+    updates.map(({ id, position }) =>
+      db().from('activities').update({ position }).eq('id', id)
+    )
+  )
+  revalidatePath('/', 'layout')
+}

@@ -3,11 +3,19 @@
 import { useRef, useState, useTransition } from 'react'
 import { startOfDay, endOfDay, addDays, format } from 'date-fns'
 import { nl } from 'date-fns/locale'
+import {
+  DndContext, DragEndEvent, DragOverlay, DragStartEvent,
+  closestCenter, PointerSensor, useSensor, useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext, arrayMove, verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import { Activity, Tag } from '@/lib/supabase'
 import QuickCapture from './QuickCapture'
 import TaskRow from './TaskRow'
+import SortableTaskRow from './SortableTaskRow'
 import ProjectView from './ProjectView'
-import { createTask } from '@/app/actions/tasks'
+import { createTask, rescheduleTask, reorderTasks } from '@/app/actions/tasks'
 import { Plus } from 'lucide-react'
 
 interface Props {
@@ -17,13 +25,23 @@ interface Props {
   captureRef: React.RefObject<HTMLInputElement | null>
 }
 
+type SectionKey = 'overdue' | 'today' | 'tomorrow' | 'thisweek' | 'later' | 'completed'
+
 export default function FocusZone({ activities, tags, activeProject, captureRef }: Props) {
   const tagColors = Object.fromEntries(tags.map(t => [t.name, t.color]))
+  const [localActivities, setLocalActivities] = useState(activities)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  // Sync prop changes (na server revalidate)
+  if (activities !== localActivities && !activeId) {
+    setLocalActivities(activities)
+  }
 
   // Project actief → inline project view
   if (activeProject) {
     const tag = tags.find(t => t.name === activeProject)
-    const filtered = activities.filter(a => a.project_tags.includes(activeProject))
+    const filtered = localActivities.filter(a => a.project_tags.includes(activeProject))
     return (
       <ProjectView
         tag={activeProject}
@@ -34,16 +52,15 @@ export default function FocusZone({ activities, tags, activeProject, captureRef 
     )
   }
 
-  const base = activities
-
-  const open      = base.filter(a => a.status === 'open' || a.status === 'horizon')
-  const completed = base.filter(a => a.status === 'completed').slice(0, 5)
-
   const now   = new Date()
   const tod0  = startOfDay(now)
   const tod1  = endOfDay(now)
+  const tom0  = startOfDay(addDays(now, 1))
   const tom1  = endOfDay(addDays(now, 1))
   const week1 = endOfDay(addDays(now, 7))
+
+  const open      = localActivities.filter(a => a.status === 'open' || a.status === 'horizon')
+  const completed = localActivities.filter(a => a.status === 'completed').slice(0, 5)
 
   const byDue = (a: Activity) => a.due_date ? new Date(a.due_date).getTime() : Infinity
 
@@ -53,55 +70,140 @@ export default function FocusZone({ activities, tags, activeProject, captureRef 
   const thisWeek = open.filter(a => a.due_date && new Date(a.due_date) > tom1 && new Date(a.due_date) <= week1).sort((a,b) => byDue(a)-byDue(b))
   const later    = open.filter(a => !a.due_date || new Date(a.due_date) > week1 || a.status === 'horizon')
 
+  const sections: Record<SectionKey, Activity[]> = {
+    overdue, today, tomorrow, thisweek: thisWeek, later, completed,
+  }
+
+  function findSection(id: string): SectionKey | null {
+    for (const [key, items] of Object.entries(sections)) {
+      if (items.find(a => a.id === id)) return key as SectionKey
+    }
+    return null
+  }
+
+  // Due date voor een sectie
+  function dueDateForSection(section: SectionKey): string | null {
+    const d = new Date()
+    if (section === 'today')    { d.setHours(23, 59, 0, 0); return d.toISOString() }
+    if (section === 'tomorrow') { const t = addDays(d, 1); t.setHours(23, 59, 0, 0); return t.toISOString() }
+    if (section === 'thisweek') { const t = addDays(d, 3); t.setHours(23, 59, 0, 0); return t.toISOString() }
+    if (section === 'later')    return null
+    return null
+  }
+
+  function handleDragStart({ active }: DragStartEvent) {
+    setActiveId(active.id as string)
+  }
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    setActiveId(null)
+    if (!over || active.id === over.id) return
+
+    const fromSection = findSection(active.id as string)
+    const toSection   = findSection(over.id as string)
+
+    if (!fromSection || !toSection) return
+
+    if (fromSection === toSection) {
+      // Herordenen binnen sectie
+      const items    = sections[fromSection]
+      const oldIndex = items.findIndex(a => a.id === active.id)
+      const newIndex = items.findIndex(a => a.id === over.id)
+      const reordered = arrayMove(items, oldIndex, newIndex)
+
+      // Optimistisch updaten
+      setLocalActivities(prev => {
+        const others = prev.filter(a => !reordered.find(r => r.id === a.id))
+        return [...others, ...reordered]
+      })
+
+      // Server: sla posities op
+      reorderTasks(reordered.map((a, i) => ({ id: a.id, position: i })))
+    } else {
+      // Verplaatsen naar andere sectie → due_date aanpassen
+      const newDue = dueDateForSection(toSection)
+      setLocalActivities(prev =>
+        prev.map(a => a.id === active.id ? { ...a, due_date: newDue } : a)
+      )
+      rescheduleTask(active.id as string, newDue)
+    }
+  }
+
+  const activeTask = activeId ? localActivities.find(a => a.id === activeId) : null
   const todayStr    = format(now, 'EEEE d MMMM', { locale: nl })
   const tomorrowStr = format(addDays(now, 1), 'EEEE d MMMM', { locale: nl })
 
   return (
-    <main className="flex-1 overflow-y-auto bg-[#f5f6fb] min-w-0">
-      <QuickCapture inputRef={captureRef} defaultProjectTag={activeProject ?? undefined} />
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <main className="flex-1 overflow-y-auto bg-[#f5f6fb] min-w-0">
+        <QuickCapture inputRef={captureRef} defaultProjectTag={activeProject ?? undefined} />
 
-      <div className="px-[30px] pb-10">
-        {overdue.length > 0 && (
-          <Section title="Overdue" titleColor="#e53e3e" sub="te laat" count={overdue.length}>
-            {overdue.map(t => <TaskRow key={t.id} task={t} isOverdue tags={tagColors} />)}
+        <div className="px-[30px] pb-10">
+          {overdue.length > 0 && (
+            <Section title="Overdue" titleColor="#e53e3e" sub="te laat" count={overdue.length}>
+              <SortableContext items={overdue.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                {overdue.map(t => <SortableTaskRow key={t.id} task={t} isOverdue tags={tagColors} />)}
+              </SortableContext>
+            </Section>
+          )}
+
+          <Section title="Vandaag" sub={todayStr} count={today.length}>
+            <SortableContext items={today.map(a => a.id)} strategy={verticalListSortingStrategy}>
+              {today.map(t => <SortableTaskRow key={t.id} task={t} tags={tagColors} />)}
+            </SortableContext>
+            <InlineAdd dateHint="vandaag" />
           </Section>
-        )}
 
-        <Section title="Vandaag" sub={todayStr} count={today.length}>
-          {today.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)}
-          <InlineAdd dateHint="vandaag" />
-        </Section>
-
-        <Section title="Morgen" sub={tomorrowStr} count={tomorrow.length}>
-          {tomorrow.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)}
-          <InlineAdd dateHint="morgen" />
-        </Section>
-
-        {thisWeek.length > 0 && (
-          <Section title="Deze week" sub="di – zo" count={thisWeek.length}>
-            {thisWeek.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)}
+          <Section title="Morgen" sub={tomorrowStr} count={tomorrow.length}>
+            <SortableContext items={tomorrow.map(a => a.id)} strategy={verticalListSortingStrategy}>
+              {tomorrow.map(t => <SortableTaskRow key={t.id} task={t} tags={tagColors} />)}
+            </SortableContext>
+            <InlineAdd dateHint="morgen" />
           </Section>
-        )}
 
-        {later.length > 0 && (
-          <Section title="Later" sub="" count={later.length}>
-            {later.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)}
-          </Section>
-        )}
+          {thisWeek.length > 0 && (
+            <Section title="Deze week" sub="di – zo" count={thisWeek.length}>
+              <SortableContext items={thisWeek.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                {thisWeek.map(t => <SortableTaskRow key={t.id} task={t} tags={tagColors} />)}
+              </SortableContext>
+            </Section>
+          )}
 
-        {completed.length > 0 && (
-          <Section title="Gedaan" sub="" count={completed.length}>
-            {completed.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)}
-          </Section>
-        )}
+          {later.length > 0 && (
+            <Section title="Later" sub="" count={later.length}>
+              <SortableContext items={later.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                {later.map(t => <SortableTaskRow key={t.id} task={t} tags={tagColors} />)}
+              </SortableContext>
+            </Section>
+          )}
 
-        {open.length === 0 && completed.length === 0 && (
-          <p className="text-center text-[#b0b5c8] text-[13px] pt-16">
-            Geen taken — typ hierboven om te beginnen
-          </p>
+          {completed.length > 0 && (
+            <Section title="Gedaan" sub="" count={completed.length}>
+              {completed.map(t => <TaskRow key={t.id} task={t} tags={tagColors} />)}
+            </Section>
+          )}
+
+          {open.length === 0 && completed.length === 0 && (
+            <p className="text-center text-[#b0b5c8] text-[13px] pt-16">
+              Geen taken — typ hierboven om te beginnen
+            </p>
+          )}
+        </div>
+      </main>
+
+      <DragOverlay>
+        {activeTask && (
+          <div className="bg-white shadow-xl rounded-[10px] opacity-95 ring-2 ring-[#4f46e5]/20">
+            <TaskRow task={activeTask} tags={tagColors} />
+          </div>
         )}
-      </div>
-    </main>
+      </DragOverlay>
+    </DndContext>
   )
 }
 

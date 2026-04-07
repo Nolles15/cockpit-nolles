@@ -78,13 +78,36 @@ export function parseInput(raw: string): ParsedInput {
   }).trim()
 
   // ── Date: chrono-node NLP (via NL→EN vertaling) ─────────
-  const textEn   = nlToEn(text)
-  const parsed   = chrono.parse(textEn, new Date(), { forwardDate: true })
+  // Strip eerst bekende NL datum-tokens uit de originele tekst (vóór vertaling),
+  // zodat positie-mismatch tussen NL en EN niet tot restanten leidt ("ag" van "vandaag").
+  const NL_DATE_TOKENS = [
+    /\bovermorgen\b/gi,
+    /\bmorgen\b/gi,
+    /\bgisteren\b/gi,
+    /\bvandaag\b/gi,
+    /\bvolgende\s+week\b/gi,
+    /\bdeze\s+week\b/gi,
+    /\bover\s+\d+\s+weken?\b/gi,
+    /\bover\s+\d+\s+dagen?\b/gi,
+    /\bmaandag\b/gi, /\bdinsdag\b/gi, /\bwoensdag\b/gi,
+    /\bdonderdag\b/gi, /\bvrijdag\b/gi, /\bzaterdag\b/gi, /\bzondag\b/gi,
+    // tijden: 10u, 10:30, 10u30
+    /\b\d{1,2}[u:]\d{2}\b/gi,
+    /\b\d{1,2}u\b/gi,
+  ]
+
+  const textEn = nlToEn(text)
+  const parsed = chrono.parse(textEn, new Date(), { forwardDate: true })
   let due_date: Date | null = null
   if (parsed.length > 0) {
     due_date = parsed[0].date()
-    // Strip het overeenkomstige stuk uit de originele tekst op basis van positie
-    text = text.slice(0, parsed[0].index) + text.slice(parsed[0].index + parsed[0].text.length)
+    // Strip NL datum-tokens direct uit de originele tekst
+    for (const re of NL_DATE_TOKENS) {
+      text = text.replace(re, ' ')
+    }
+    // Fallback: strip op positie+lengte in EN tekst als er nog EN-woorden overblijven
+    const enToken = parsed[0].text  // bv. "today", "next week"
+    text = text.replace(new RegExp(`\\b${enToken}\\b`, 'i'), ' ')
     text = text.trim()
   }
 
