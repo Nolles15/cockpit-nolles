@@ -11,4 +11,4 @@ $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAv
 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Force
 
-Write-Host "✓ Task '$taskName' aangemaakt. Outlook wordt elke 15 minuten gesynchroniseerd."
+Write-Host "Task '$taskName' aangemaakt. Outlook wordt elke 15 minuten gesynchroniseerd."

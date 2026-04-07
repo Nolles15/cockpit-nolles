@@ -4,7 +4,8 @@ import { useRef, useState } from 'react'
 import Topbar from './Topbar'
 import Sidebar from './Sidebar'
 import FocusZone from './FocusZone'
-import PulsePlaceholder from './PulsePlaceholder'
+import PulseTimeline from './PulseTimeline'
+import MobileShell from './MobileShell'
 import { Tag, Activity } from '@/lib/supabase'
 
 interface Props {
@@ -28,25 +29,33 @@ export default function DashboardShell({ tags, activities }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <Topbar />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar
-          tags={tags}
-          activeView={activeView}
-          activeProject={activeProject}
-          onViewChange={handleViewChange}
-          onProjectClick={handleProjectClick}
-          onNewTask={() => captureRef.current?.focus()}
-        />
-        <FocusZone
-          activities={activities}
-          tags={tags}
-          activeProject={activeProject}
-          captureRef={captureRef}
-        />
-        <PulsePlaceholder />
+    <>
+      {/* ── Mobile (< md) ─────────────────────────────────── */}
+      <div className="md:hidden h-screen">
+        <MobileShell tags={tags} activities={activities} />
       </div>
-    </div>
+
+      {/* ── Desktop (≥ md) ────────────────────────────────── */}
+      <div className="hidden md:flex flex-col h-screen overflow-hidden">
+        <Topbar />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar
+            tags={tags}
+            activeView={activeView}
+            activeProject={activeProject}
+            onViewChange={handleViewChange}
+            onProjectClick={handleProjectClick}
+            onNewTask={() => captureRef.current?.focus()}
+          />
+          <FocusZone
+            activities={activities}
+            tags={tags}
+            activeProject={activeProject}
+            captureRef={captureRef}
+          />
+          <PulseTimeline />
+        </div>
+      </div>
+    </>
   )
 }

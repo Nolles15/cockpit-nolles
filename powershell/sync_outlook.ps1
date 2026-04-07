@@ -30,7 +30,6 @@ try {
   # Filter (Outlook vereist dit formaat)
   $filter = "[Start] >= '$($start.ToString("MM/dd/yyyy HH:mm"))' AND [Start] <= '$($end.ToString("MM/dd/yyyy HH:mm"))'"
   $items  = $calendar.Items
-  $items.IncludeRecurrences = $true
   $items.Sort("[Start]")
   $filtered = $items.Restrict($filter)
 
@@ -59,7 +58,7 @@ try {
   }
 
   $response = Invoke-RestMethod `
-    -Uri     "$supabaseUrl/functions/v1/sync-calendar" `
+    -Uri     "$supabaseUrl/functions/v1/sync-calender" `
     -Method  POST `
     -Headers $headers `
     -Body    $body
